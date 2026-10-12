@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from './db.js';
 import { redis } from './cache.js';
+import { publishMenuUpdated } from './kafka.js';
 
 const MENU_CACHE_TTL_SECONDS = 30;
 
@@ -52,6 +53,49 @@ router.get('/restaurants/:restaurantId/menu', async (req, res, next) => {
     await redis.set(cacheKey, JSON.stringify(menu), { EX: MENU_CACHE_TTL_SECONDS });
 
     res.json(menu);
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+router.patch('/restaurants/:restaurantId/menu/:itemId', async (req, res, next) => {
+  const { restaurantId, itemId } = req.params;
+  const { priceMinorUnits, available } = req.body;
+
+  try {
+    const existing = await db.query(
+      'SELECT id, name, price_minor_units, currency, available FROM menu_items WHERE id = $1 AND restaurant_id = $2',
+      [itemId, restaurantId]
+    );
+    const item = existing.rows[0];
+    if (!item) {
+      return res.status(404).json({ error: 'menu item not found' });
+    }
+
+    const updated = {
+      priceMinorUnits: priceMinorUnits ?? Number(item.price_minor_units),
+      available: available ?? item.available,
+    };
+
+    await db.query(
+      'UPDATE menu_items SET price_minor_units = $1, available = $2 WHERE id = $3',
+      [updated.priceMinorUnits, updated.available, itemId]
+    );
+
+    await redis.del(`menu:${restaurantId}`);
+
+    const updatedItem = {
+      id: item.id,
+      name: item.name,
+      priceMinorUnits: updated.priceMinorUnits,
+      currency: item.currency,
+      available: updated.available,
+    };
+
+    await publishMenuUpdated({ restaurantId, item: updatedItem });
+
+    res.json(updatedItem);
   } catch (err) {
     next(err);
   }

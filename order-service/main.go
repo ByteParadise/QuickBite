@@ -104,7 +104,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-/* */
 func makeOrdersHandler(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse order request
@@ -237,7 +236,7 @@ func main() {
 	Cancel a parent context and everything derived from it downstream gets cancelled too
 	— it's how Go lets you abandon a whole tree of in-flight work (e.g. a slow DB query) 
 	from one place. */
-	ctx := context.Background()
+	var ctx context.Context = context.Background()
 	db, err := newDB(ctx)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
@@ -247,6 +246,9 @@ func main() {
 	if err := ensureSchema(ctx, db); err != nil {
 		log.Fatalf("failed to ensure schema: %v", err)
 	}
+	
+	go consumeAddressSaved(ctx, db)
+	go consumeMenuUpdated(ctx, db)
 
 	port := os.Getenv("PORT")
 	if port == "" {
