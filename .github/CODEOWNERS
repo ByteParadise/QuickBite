@@ -1,0 +1,7 @@
+* @ByteParadise/platform
+/restaurant-service/ @ByteParadise/restaurants
+/order-service/ @ByteParadise/orders
+/account-service/ @ByteParadise/accounts
+/payment-service/ @ByteParadise/payments
+/event-contracts/proto/quickbite/account/ @ByteParadise/accounts
+/event-contracts/proto/quickbite/restaurant/ @ByteParadise/restaurants

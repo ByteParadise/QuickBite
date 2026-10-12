@@ -1,0 +1,29 @@
+{
+  "name": "quickbite-restaurant-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "QuickBite restaurant-service: menus and prices, read through a Redis cache.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ByteParadise/QuickBite-restaurant-service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ByteParadise/QuickBite-restaurant-service/issues"
+  },
+  "homepage": "https://github.com/ByteParadise/QuickBite-restaurant-service#readme",
+  "dependencies": {
+    "express": "^5.0.0",
+    "pg": "^8.23.1",
+    "redis": "^6.3.0"
+  }
+}

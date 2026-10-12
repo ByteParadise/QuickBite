@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package quickbite.restaurant.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ByteParadise/QuickBite-event-contracts/gen/go/quickbite/restaurant/v1;restaurantv1";
+
+// Published by restaurant-service when a menu changes.
+// Owned by the Restaurants team. Consumed by order-service (its menu copy).
+message MenuUpdated {
+  // Unique per event. Consumers use it to ignore duplicates.
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  string restaurant_id = 3;
+  // The items that changed in this update, not the whole menu.
+  repeated MenuItem items = 4;
+}
+
+message MenuItem {
+  string item_id = 1;
+  string name = 2;
+  // Money is integer minor units (for example cents), never floating point.
+  int64 price_minor_units = 3;
+  // ISO 4217, for example "USD".
+  string currency = 4;
+  bool available = 5;
+}

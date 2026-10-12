@@ -1,0 +1,14 @@
+# The code-generation config for buf. Tells `buf generate` which plugins to
+# run against the schemas in proto/, and where to put the generated code.
+# Has nothing to do with linting or breaking-change checks; see buf.yaml
+# for that.
+
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: gen/go
+    opt: paths=source_relative
+
+  - remote: buf.build/bufbuild/es
+    out: gen/node
+    opt: target=ts

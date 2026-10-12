@@ -1,0 +1,22 @@
+name: buf
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  buf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # installs the buf CLI on the runner, then it runs two checks you've been running locally:
+      # `buf lint` and `buf breaking`. The breaking check is only run on PRs, not on pushes to main.
+      - uses: bufbuild/buf-setup-action@v1
+      - name: Lint
+        run: buf lint
+      - name: Breaking changes against main
+        if: github.event_name == 'pull_request'
+        run: buf breaking --against "https://github.com/${GITHUB_REPOSITORY}.git#branch=main"

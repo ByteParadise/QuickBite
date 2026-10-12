@@ -1,0 +1,21 @@
+# The module config for buf. Tells buf where the schema files live and which
+# checks to run against them — `lint` and `breaking` are read by `buf lint`
+# and `buf breaking`. This file has nothing to do with code generation;
+# see buf.gen.yaml for that.
+version: v2
+
+# The `modules` section tells buf where to find the schema files. Each module
+# is a separate set of schema files that can be versioned independently. The
+# `path` is the relative path to the module's root directory, which contains a
+# buf.yaml file. The `path` can be a relative path or a remote URL.
+modules:
+  - path: proto
+    name: buf.build/byteparadise/quickbite-event-contracts
+
+lint:
+  use:
+    - STANDARD
+
+breaking:
+  use:
+    - FILE

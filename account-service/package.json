@@ -1,0 +1,30 @@
+{
+  "name": "quickbite-account-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "**Owner:** Accounts team **Language:** Node.js (Express 5) **Role:** Profiles and saved addresses. Integrates with the managed identity provider. Publishes `AddressSaved` events.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.16.0",
+    "express": "^5.0.0",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.13.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ByteParadise/QuickBite-account-service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ByteParadise/QuickBite-account-service/issues"
+  },
+  "homepage": "https://github.com/ByteParadise/QuickBite-account-service#readme"
+}
