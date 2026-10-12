@@ -1,0 +1,7 @@
+version: v2
+inputs:
+  - module: buf.build/byteparadise/quickbite-event-contracts
+plugins:
+  - remote: buf.build/bufbuild/es
+    out: gen/node
+    opt: target=js
