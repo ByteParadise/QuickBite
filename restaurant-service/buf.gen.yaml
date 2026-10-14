@@ -4,4 +4,4 @@ inputs:
 plugins:
   - remote: buf.build/bufbuild/es
     out: gen/node
-    opt: target=js
+    opt: target=ts
