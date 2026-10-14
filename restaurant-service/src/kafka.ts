@@ -17,7 +17,21 @@ export async function connectProducer() {
   await producer.connect();
 }
 
-export async function publishMenuUpdated({ restaurantId, item }) {
+interface MenuUpdateItem {
+  id: string;
+  name: string;
+  priceMinorUnits: number;
+  currency: string;
+  available: boolean;
+}
+
+export async function publishMenuUpdated({
+  restaurantId,
+  item 
+}: {
+  restaurantId: string;
+  item: MenuUpdateItem;
+}) {
   const message = create(MenuUpdatedSchema, {
     eventId: crypto.randomUUID(),
     occurredAt: timestampFromDate(new Date()),
@@ -26,7 +40,7 @@ export async function publishMenuUpdated({ restaurantId, item }) {
       create(MenuItemSchema, {
         itemId: item.id,
         name: item.name,
-        priceMinorUnits: item.priceMinorUnits,
+        priceMinorUnits: BigInt(item.priceMinorUnits),
         currency: item.currency,
         available: item.available,
       }),

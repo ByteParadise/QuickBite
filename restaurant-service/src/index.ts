@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { ErrorRequestHandler } from 'express';
 import { router } from './routes.js';
 import { redis } from './cache.js';
 import { ensureSchema } from './schema.js';
@@ -10,10 +10,12 @@ const app = express();
 app.use(express.json());
 app.use(router);
 
-app.use((err, req, res, next) => {
+
+const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ error: 'internal error' });
-});
+  res.status(500).json({ error: "internal error"});
+};
+app.use(errorHandler);
 
 async function main() {
   await ensureSchema();
