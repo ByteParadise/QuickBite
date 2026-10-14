@@ -27,5 +27,7 @@ jobs:
       - uses: bufbuild/buf-setup-action@v1
       - name: Generate code from event contracts
         run: buf generate
+        env:
+          BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
       - name: Type check
         run: npx tsc --noEmit
