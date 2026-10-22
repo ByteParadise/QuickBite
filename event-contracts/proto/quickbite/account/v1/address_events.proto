@@ -1,18 +1,16 @@
 syntax = "proto3";
 
-// Namespace for generated code, prevents collisions with messages of the same name in other services.
+// name for generated code
 package quickbite.account.v1;
 
-// Pulls in Google's well-known Timestamp type so you don't invent your own date/time representation.
+// pulls in Google's well-known Timestamp type so you don't invent your own date/time representation.
 import "google/protobuf/timestamp.proto";
 
-// Tells the Go code generator what import path and package alias to use for generated Go code.
-// Node codegen doesn't need this. It is Go specific.
 option go_package = "github.com/ByteParadise/QuickBite-event-contracts/gen/go/quickbite/account/v1;accountv1";
 
-// Published by account-service when a customer saves or changes an address.
-// Owned by the Accounts team. Consumed by order-service.
-// message defines the structure of the event payload.
+// producer: account-service
+// consumer: order-service
+// when a customer saves or changes an address
 message AddressSaved {
   // Unique per event. Consumers use it to ignore duplicates.
   string event_id = 1;

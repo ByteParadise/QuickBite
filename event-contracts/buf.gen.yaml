@@ -1,7 +1,4 @@
-# The code-generation config for buf. Tells `buf generate` which plugins to
-# run against the schemas in proto/, and where to put the generated code.
-# Has nothing to do with linting or breaking-change checks; see buf.yaml
-# for that.
+# buf generate configuration
 
 version: v2
 plugins:

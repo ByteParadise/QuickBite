@@ -2,7 +2,7 @@ import { Kafka } from 'kafkajs';
 import { create, toBinary } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import crypto from 'crypto';
-import { MenuUpdatedSchema, MenuItemSchema } from '../gen/node/quickbite/restaurant/v1/menu_events_pb.js';
+import { MenuUpdatedSchema, MenuItemSchema } from '../../gen/node/quickbite/restaurant/v1/menu_events_pb.js';
 
 export const MENU_UPDATED_TOPIC = 'quickbite.restaurant.v1.MenuUpdated';
 
@@ -13,6 +13,7 @@ const kafka = new Kafka({
 
 export const producer = kafka.producer();
 
+// ensures kafka connection
 export async function connectProducer() {
   await producer.connect();
 }

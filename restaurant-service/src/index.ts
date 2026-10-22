@@ -1,8 +1,8 @@
 import express, { ErrorRequestHandler } from 'express';
 import { router } from './routes.js';
-import { redis } from './cache.js';
-import { ensureSchema } from './schema.js';
-import { connectProducer } from './kafka.js';
+import { redis } from './db/redis.js';
+import { ensureSchema } from './db/schema.js';
+import { connectProducer } from './kafka/kafka.js';
 
 const PORT = process.env.PORT ?? 4001;
 

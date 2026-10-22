@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { db } from './db.js';
-import { redis } from './cache.js';
-import { publishMenuUpdated } from './kafka.js';
+import { db } from './db/db.js';
+import { redis } from './db/redis.js';
+import { publishMenuUpdated } from './kafka/kafka.js';
 
 const MENU_CACHE_TTL_SECONDS = 30;
 
@@ -58,7 +58,7 @@ router.get('/restaurants/:restaurantId/menu', async (req, res, next) => {
   }
 });
 
-
+/*  */
 router.patch('/restaurants/:restaurantId/menu/:itemId', async (req, res, next) => {
   const { restaurantId, itemId } = req.params;
   const { priceMinorUnits, available } = req.body;

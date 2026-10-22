@@ -1,4 +1,5 @@
 version: v2
+# BSR
 inputs:
   - module: buf.build/byteparadise/quickbite-event-contracts
 plugins:

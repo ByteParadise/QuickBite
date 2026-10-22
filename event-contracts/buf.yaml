@@ -1,21 +1,19 @@
-# The module config for buf. Tells buf where the schema files live and which
-# checks to run against them — `lint` and `breaking` are read by `buf lint`
-# and `buf breaking`. This file has nothing to do with code generation;
-# see buf.gen.yaml for that.
+# buf configuration
+
 version: v2
 
-# The `modules` section tells buf where to find the schema files. Each module
-# is a separate set of schema files that can be versioned independently. The
-# `path` is the relative path to the module's root directory, which contains a
-# buf.yaml file. The `path` can be a relative path or a remote URL.
 modules:
+  # local schema files path. This is also set as root when `buf push`
   - path: proto
+  # remote identifier for `buf push`
     name: buf.build/byteparadise/quickbite-event-contracts
 
 lint:
   use:
+    # default recommended linting rule
     - STANDARD
 
 breaking:
   use:
+    # enables CI to catch violations (type, numbering, etc) over schema structure
     - FILE

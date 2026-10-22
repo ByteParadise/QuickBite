@@ -9,6 +9,7 @@ import (
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/protobuf/proto"
 
+	// `option go_package` from each proto file enables this name convention.
 	accountv1 "quickbite-order-service/gen/go/quickbite/account/v1"
 	restaurantv1 "quickbite-order-service/gen/go/quickbite/restaurant/v1"
 )
