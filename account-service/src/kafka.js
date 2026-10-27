@@ -1,10 +1,12 @@
 import { Kafka } from 'kafkajs';
 import { create, toBinary } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
+import { getOption } from '@bufbuild/protobuf';
 import crypto from 'crypto';
 import { AddressSavedSchema, AddressSchema } from '../gen/node/quickbite/account/v1/address_events_pb.js';
+import { topic } from '../gen/node/quickbite/kafka/v1/options_pb.js';
 
-export const ADDRESS_SAVED_TOPIC = 'quickbite.account.v1.AddressSaved';
+export const ADDRESS_SAVED_TOPIC = getOption(AddressSavedSchema, topic);
 
 const kafka = new Kafka({
   clientId: 'account-service',
