@@ -1,4 +1,4 @@
-package main
+package services
 
 import (
 	"context"
@@ -9,11 +9,16 @@ import (
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/protobuf/proto"
 
+	// `option go_package` from each proto file enables this name convention.
 	accountv1 "quickbite-order-service/gen/go/quickbite/account/v1"
+	kafkav1 "quickbite-order-service/gen/go/quickbite/kafka/v1"
 	restaurantv1 "quickbite-order-service/gen/go/quickbite/restaurant/v1"
 )
 
-const addressSavedTopic = "quickbite.account.v1.AddressSaved"
+var addressSavedTopic = proto.GetExtension(
+	(&accountv1.AddressSaved{}).ProtoReflect().Descriptor().Options(),
+	kafkav1.E_Topic,
+).(string)
 
 func kafkaBroker() string {
 	if broker := os.Getenv("KAFKA_BROKER"); broker != "" {
@@ -22,7 +27,7 @@ func kafkaBroker() string {
 	return "localhost:9092"
 }
 
-func consumeAddressSaved(ctx context.Context, db *pgxpool.Pool) {
+func ConsumeAddressSaved(ctx context.Context, db *pgxpool.Pool) {
 	// Get kafka reader for addressSavedTopic
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{kafkaBroker()},
@@ -49,19 +54,22 @@ func consumeAddressSaved(ctx context.Context, db *pgxpool.Pool) {
 		// Insert the address info
 		addr := event.GetAddress()
 		_, err = db.Exec(ctx,
-			`INSERT INTO addresses (address_id, customer_id, line1, line2, city, region, postal_code, country_code, updated_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
+			`INSERT INTO addresses (address_id, customer_id, line1, line2, city, state, postal_code, country_code, latitude, longitude, updated_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
 			 ON CONFLICT (address_id) DO UPDATE SET
 			   customer_id = EXCLUDED.customer_id,
 			   line1 = EXCLUDED.line1,
 			   line2 = EXCLUDED.line2,
 			   city = EXCLUDED.city,
-			   region = EXCLUDED.region,
+			   state = EXCLUDED.state,
 			   postal_code = EXCLUDED.postal_code,
 			   country_code = EXCLUDED.country_code,
+			   latitude = EXCLUDED.latitude,
+			   longitude = EXCLUDED.longitude,
 			   updated_at = now()`,
 			event.GetAddressId(), event.GetCustomerId(), addr.GetLine1(), addr.GetLine2(),
-			addr.GetCity(), addr.GetRegion(), addr.GetPostalCode(), addr.GetCountryCode(),
+			addr.GetCity(), addr.GetState(), addr.GetPostalCode(), addr.GetCountryCode(),
+			addr.GetLatitude(), addr.GetLongitude(),
 		)
 		if err != nil {
 			log.Printf("AddressSaved: failed to upsert address %s: %v", event.GetAddressId(), err)
@@ -70,9 +78,12 @@ func consumeAddressSaved(ctx context.Context, db *pgxpool.Pool) {
 	}
 }
 
-const menuUpdatedTopic = "quickbite.restaurant.v1.MenuUpdated"
+var menuUpdatedTopic = proto.GetExtension(
+	(&restaurantv1.MenuUpdated{}).ProtoReflect().Descriptor().Options(),
+	kafkav1.E_Topic,
+).(string)
 
-func consumeMenuUpdated(ctx context.Context, db *pgxpool.Pool) {
+func ConsumeMenuUpdated(ctx context.Context, db *pgxpool.Pool) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{kafkaBroker()},
 		Topic:   menuUpdatedTopic,

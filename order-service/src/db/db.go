@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"context"
@@ -9,10 +9,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-//go:embed db/schema.sql
+//go:embed schema.sql
 var schemaSQL string
 
-func newDB(ctx context.Context) (*pgxpool.Pool, error) {
+func ConnectDB(ctx context.Context) (*pgxpool.Pool, error) {
 	connStr := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s",
 		getEnv("POSTGRES_USER", "quickbite"),
@@ -24,7 +24,7 @@ func newDB(ctx context.Context) (*pgxpool.Pool, error) {
 	return pgxpool.New(ctx, connStr)
 }
 
-func ensureSchema(ctx context.Context, db *pgxpool.Pool) error {
+func EnsureSchema(ctx context.Context, db *pgxpool.Pool) error {
 	_, err := db.Exec(ctx, schemaSQL)
 	return err
 }

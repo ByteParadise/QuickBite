@@ -1,7 +1,10 @@
 version: v2
+# BSR
 inputs:
   - module: buf.build/byteparadise/quickbite-event-contracts
 plugins:
   - remote: buf.build/bufbuild/es
     out: gen/node
-    opt: target=js
+    opt:
+      - target=js
+      - import_extension=js

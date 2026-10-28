@@ -1,28 +1,30 @@
 import { Router } from 'express';
-import { db } from './db.js';
-import { redis } from './cache.js';
+import { db } from '../db/db.js';
+import { redis } from '../db/redis.js';
 import { publishMenuUpdated } from './kafka.js';
+
+
 
 const MENU_CACHE_TTL_SECONDS = 30;
 
-export const router = Router();
+export const restaurantRouter = Router();
 
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-router.get('/restaurants/:restaurantId/menu', async (req, res, next) => {
+/** Restaurant Menu Query
+ * Checks redis cache first.
+ * If not cacahed, execute query and cache the result. */
+restaurantRouter.get('/restaurants/:restaurantId/menu', async (req, res, next) => {
   const { restaurantId } = req.params;
+  // menu is scoped to each restaurant
   const cacheKey = `menu:${restaurantId}`;
 
   try {
-    // check redis cache first and return its result if cached
+    // Check redis cache first and return its result if cached
     const cached = await redis.get(cacheKey);
     if (cached) {
       return res.json(JSON.parse(cached));
     }
 
-    // if menu is not cached, query the db
+    // If menu is not cached, query the db
     const restaurantResult = await db.query(
       'SELECT id, name FROM restaurants WHERE id = $1',
       [restaurantId]
@@ -49,7 +51,7 @@ router.get('/restaurants/:restaurantId/menu', async (req, res, next) => {
       }))
     };
 
-    // cache the query with TTL
+    // Cache the query with TTL
     await redis.set(cacheKey, JSON.stringify(menu), { EX: MENU_CACHE_TTL_SECONDS });
 
     res.json(menu);
@@ -58,10 +60,12 @@ router.get('/restaurants/:restaurantId/menu', async (req, res, next) => {
   }
 });
 
-
-router.patch('/restaurants/:restaurantId/menu/:itemId', async (req, res, next) => {
+/** Update Menu Detail
+ * Once updated, invalidate redis cache.
+ * Then, produce MenuUpdated Kafka message. */
+restaurantRouter.patch('/restaurants/:restaurantId/menu/:itemId', async (req, res, next) => {
   const { restaurantId, itemId } = req.params;
-  const { priceMinorUnits, available } = req.body;
+  const { name, priceMinorUnits, available } = req.body;
 
   try {
     const existing = await db.query(
@@ -74,15 +78,18 @@ router.patch('/restaurants/:restaurantId/menu/:itemId', async (req, res, next) =
     }
 
     const updated = {
+      name: name ?? item.name,
       priceMinorUnits: priceMinorUnits ?? Number(item.price_minor_units),
       available: available ?? item.available,
     };
 
+    // Update the menu
     await db.query(
-      'UPDATE menu_items SET price_minor_units = $1, available = $2 WHERE id = $3',
-      [updated.priceMinorUnits, updated.available, itemId]
+      'UPDATE menu_items SET name = $1, price_minor_units = $2, available = $3 WHERE id = $4',
+      [updated.name, updated.priceMinorUnits, updated.available, itemId]
     );
 
+    // Invalidate cache since there is a change to the menu
     await redis.del(`menu:${restaurantId}`);
 
     const updatedItem = {
@@ -93,7 +100,8 @@ router.patch('/restaurants/:restaurantId/menu/:itemId', async (req, res, next) =
       available: updated.available,
     };
 
-    await publishMenuUpdated({ restaurantId, item: updatedItem });
+    // Produce MenuUpdated message
+    await publishMenuUpdated({ restaurantId, updatedItem: updatedItem });
 
     res.json(updatedItem);
   } catch (err) {

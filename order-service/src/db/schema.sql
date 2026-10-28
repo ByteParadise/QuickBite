@@ -22,9 +22,11 @@ CREATE TABLE IF NOT EXISTS addresses (
     line1 TEXT NOT NULL,
     line2 TEXT NOT NULL DEFAULT '',
     city TEXT NOT NULL,
-    region TEXT NOT NULL,
+    state TEXT NOT NULL,
     postal_code TEXT NOT NULL,
     country_code TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL DEFAULT 0,
+    longitude DOUBLE PRECISION NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

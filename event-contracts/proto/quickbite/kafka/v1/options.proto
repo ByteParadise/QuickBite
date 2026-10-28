@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package quickbite.kafka.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "quickbite-order-service/gen/go/quickbite/kafka/v1;kafkav1";
+
+// Custom message option carrying the Kafka topic this event is published to.
+extend google.protobuf.MessageOptions {
+  string topic = 50001;
+}

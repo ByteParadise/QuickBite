@@ -1,15 +1,19 @@
 import express, { ErrorRequestHandler } from 'express';
-import { router } from './routes.js';
-import { redis } from './cache.js';
-import { ensureSchema } from './schema.js';
-import { connectProducer } from './kafka.js';
+import { restaurantRouter } from './services/restaurants.js';
+import { redis } from './db/redis.js';
+import { ensureSchema } from './db/schema.js';
+import { connectProducer } from './services/kafka.js';
 
 const PORT = process.env.PORT ?? 4001;
 
 const app = express();
 app.use(express.json());
-app.use(router);
+// Each endpoint is registered with router
+app.use(restaurantRouter);
 
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok'});
+})
 
 const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   console.error(err);
