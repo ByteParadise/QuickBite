@@ -9,6 +9,7 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+/** Create User Profile */
 router.post('/profiles', async (req, res, next) => {
   const { name, email } = req.body;
 
@@ -28,6 +29,7 @@ router.post('/profiles', async (req, res, next) => {
   }
 });
 
+/** Get User Profile and Addresses */
 router.get('/profiles/:id', async (req, res, next) => {
   const { id } = req.params;
 
@@ -65,6 +67,7 @@ router.get('/profiles/:id', async (req, res, next) => {
   }
 });
 
+/** Create User Profile Address */
 router.post('/profiles/:id/addresses', async (req, res, next) => {
   const { id: profileId } = req.params;
   const { line1, line2, city, state, postalCode, isDefault } = req.body;
@@ -85,7 +88,7 @@ router.post('/profiles/:id/addresses', async (req, res, next) => {
       [id, profileId, line1, line2 ?? null, city, state, postalCode, Boolean(isDefault)]
     );
 
-    /* Publish event to kafka */
+    // Publish event to kafka
     try {
       await publishAddressSaved({ customerId: profileId, addressId: id, line1, line2, city, state, postalCode });
     } catch (err) {
@@ -107,6 +110,7 @@ router.post('/profiles/:id/addresses', async (req, res, next) => {
   }
 });
 
+/** Get User Address */
 router.get('/profiles/:id/addresses', async (req, res, next) => {
   const { id: profileId } = req.params;
 

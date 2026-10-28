@@ -4,7 +4,7 @@ import path from 'path';
 import { db } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const schemaPath = path.join(__dirname, '..', 'db', 'schema.sql');
+const schemaPath = path.join(__dirname, 'schema.sql');
 
 export async function ensureSchema() {
   const sql = readFileSync(schemaPath, 'utf8');
