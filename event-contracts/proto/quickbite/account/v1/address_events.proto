@@ -5,6 +5,7 @@ package quickbite.account.v1;
 
 // pulls in Google's well-known Timestamp type so you don't invent your own date/time representation.
 import "google/protobuf/timestamp.proto";
+import "quickbite/kafka/v1/options.proto";
 
 option go_package = "github.com/ByteParadise/QuickBite-event-contracts/gen/go/quickbite/account/v1;accountv1";
 
@@ -12,6 +13,8 @@ option go_package = "github.com/ByteParadise/QuickBite-event-contracts/gen/go/qu
 // consumer: order-service
 // when a customer saves or changes an address
 message AddressSaved {
+  option (quickbite.kafka.v1.topic) = "quickbite.account.v1.AddressSaved";
+
   // Unique per event. Consumers use it to ignore duplicates.
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -24,7 +27,7 @@ message Address {
   string line1 = 1;
   string line2 = 2;
   string city = 3;
-  string region = 4;
+  string state = 4;
   string postal_code = 5;
   // ISO 3166-1 alpha-2, for example "US".
   string country_code = 6;

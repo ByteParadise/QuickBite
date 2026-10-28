@@ -3,18 +3,22 @@ syntax = "proto3";
 package quickbite.restaurant.v1;
 
 import "google/protobuf/timestamp.proto";
+import "quickbite/kafka/v1/options.proto";
 
 option go_package = "github.com/ByteParadise/QuickBite-event-contracts/gen/go/quickbite/restaurant/v1;restaurantv1";
 
+// Published when a restaurant's menu is created or edited.
 // producer: restaurant-service
 // consumer: order-service
-// when a menu changes
+// ? buf generate creates MenuUpdatedSchema.
 message MenuUpdated {
-  // unique per event. Consumers use it to ignore duplicates.
+  option (quickbite.kafka.v1.topic) = "quickbite.restaurant.v1.MenuUpdated";
+
+  // Unique per event. Consumers use it to ignore duplicates.
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
   string restaurant_id = 3;
-  // the items that changed in this update, not the whole menu.
+  // The items that changed in this update, not the whole menu.
   repeated MenuItem items = 4;
 }
 

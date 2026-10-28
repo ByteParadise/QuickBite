@@ -1,6 +1,7 @@
 # buf generate configuration
 
 version: v2
+# without inputs, it uses local /proto folder
 plugins:
   - remote: buf.build/protocolbuffers/go
     out: gen/go
@@ -8,4 +9,6 @@ plugins:
 
   - remote: buf.build/bufbuild/es
     out: gen/node
-    opt: target=ts
+    opt:
+      - target=ts
+      - import_extension=js

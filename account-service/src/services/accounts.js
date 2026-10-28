@@ -1,16 +1,12 @@
 import { Router } from 'express';
 import crypto from 'crypto';
-import { db } from './db.js';
+import { db } from '../db/db.js';
 import { publishAddressSaved } from './kafka.js';
 
-export const router = Router();
-
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+export const accountRouter = Router();
 
 /** Create User Profile */
-router.post('/profiles', async (req, res, next) => {
+accountRouter.post('/profiles', async (req, res, next) => {
   const { name, email } = req.body;
 
   if (!name || !email) {
@@ -30,7 +26,7 @@ router.post('/profiles', async (req, res, next) => {
 });
 
 /** Get User Profile and Addresses */
-router.get('/profiles/:id', async (req, res, next) => {
+accountRouter.get('/profiles/:id', async (req, res, next) => {
   const { id } = req.params;
 
   try {
@@ -68,7 +64,7 @@ router.get('/profiles/:id', async (req, res, next) => {
 });
 
 /** Create User Profile Address */
-router.post('/profiles/:id/addresses', async (req, res, next) => {
+accountRouter.post('/profiles/:id/addresses', async (req, res, next) => {
   const { id: profileId } = req.params;
   const { line1, line2, city, state, postalCode, isDefault } = req.body;
 
@@ -111,7 +107,7 @@ router.post('/profiles/:id/addresses', async (req, res, next) => {
 });
 
 /** Get User Address */
-router.get('/profiles/:id/addresses', async (req, res, next) => {
+accountRouter.get('/profiles/:id/addresses', async (req, res, next) => {
   const { id: profileId } = req.params;
 
   try {

@@ -1,7 +1,7 @@
 import express from 'express';
-import { router } from './routes.js';
-import { ensureSchema } from './schema.js';
-import { connectProducer } from './kafka.js';
+import { accountRouter } from './services/accounts.js';
+import { ensureSchema } from './db/schema.js';
+import { connectProducer } from './services/kafka.js';
 
 const PORT = process.env.PORT ?? 4003;
 
@@ -10,13 +10,16 @@ const app = express();
  * This parses an incoming request body when its Content-Type 
  * is application/json, and attaches the result to req.body. */
 app.use(express.json());
-app.use(router);
+app.use(accountRouter);
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'internal error' });
 });
-
 
 async function main() {
   await ensureSchema();

@@ -2,8 +2,8 @@ import { Kafka } from 'kafkajs';
 import { create, toBinary, getOption } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import crypto from 'crypto';
-import { AddressSavedSchema, AddressSchema } from '../gen/node/quickbite/account/v1/address_events_pb.js';
-import { topic } from '../gen/node/quickbite/kafka/v1/options_pb.js';
+import { AddressSavedSchema, AddressSchema } from '../../gen/node/quickbite/account/v1/address_events_pb.js';
+import { topic } from '../../gen/node/quickbite/kafka/v1/options_pb.js';
 
 // Get kafka topic for AddressSaved message
 export const ADDRESS_SAVED_TOPIC = getOption(AddressSavedSchema, topic);
@@ -40,7 +40,7 @@ export async function publishAddressSaved({
       line1,
       line2: line2 ?? '',
       city,
-      region: state,
+      state,
       postalCode,
       countryCode: 'US',
       latitude: 0,
