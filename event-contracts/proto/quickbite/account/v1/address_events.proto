@@ -27,10 +27,11 @@ message Address {
   string line1 = 1;
   string line2 = 2;
   string city = 3;
-  string state = 4;
+  string region = 4 [deprecated = true];
   string postal_code = 5;
   // ISO 3166-1 alpha-2, for example "US".
   string country_code = 6;
   double latitude = 7;
   double longitude = 8;
+  string state = 9;
 }
