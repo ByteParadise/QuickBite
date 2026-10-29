@@ -1,4 +1,19 @@
 CLAUDE.md
+.claude/
 notes/*
 TEST.sprint1.md
 
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Env files (root-level; services also gitignore their own)
+.env
+.env.*
