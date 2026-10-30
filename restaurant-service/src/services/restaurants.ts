@@ -2,12 +2,73 @@ import { Router } from 'express';
 import { db } from '../db/db.js';
 import { redis } from '../db/redis.js';
 import { publishMenuUpdated } from './kafka.js';
+import { readFileSync } from 'fs';
+import path from 'path';
 
-
+const chainMenus: Record<string, any[]> = JSON.parse(
+  readFileSync(path.join(import.meta.dirname, '../data/chain-menus.json'), 'utf-8')
+)
+const CHAIN_NAMES = Object.keys(chainMenus)
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter'
+const RESTAURANT_CACHE_TTL_SECONDS = 1800
+const MAX_OVERPASS_RESULTS = 50
 
 const MENU_CACHE_TTL_SECONDS = 30;
 
 export const restaurantRouter = Router();
+
+restaurantRouter.get('/restaurants', async (req, res, next) => {
+  const lat = Number(req.query.lat)
+  const lng = Number(req.query.lng)
+  const radius = Number(req.query.radius) || 1500
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return res.status(400).json({ error: 'lat and lng are required'})
+  }
+
+  const cacheKey = `restaurants:${lat.toFixed(3)}:${lng.toFixed(3)}:${radius}`
+
+  try {
+    const cached = await redis.get(cacheKey)
+    if (cached) {
+      return res.json(JSON.parse(cached))
+    }
+
+    const nameRegex = CHAIN_NAMES.map((n) => n.split(/[\s']/)[0]).join('|')
+    const overpassQuery = `[out:json][timeout:25];node["amenity"="restaurant"]["name"~"${nameRegex}",i](around:${radius},${lat},${lng});out body ${MAX_OVERPASS_RESULTS};`
+    
+    const overpassRes = await fetch(OVERPASS_URL, { method: 'POST', body: overpassQuery})
+    if (!overpassRes.ok) {
+      throw new Error(`Overpass request failed: ${overpassRes.status}`)
+    }
+    const overpassData = await overpassRes.json()
+
+    const restaurants = overpassData.elements
+      .filter((el: any) => el.tags?.name)
+      .map((el: any) => {
+        const matchedChain = CHAIN_NAMES.find((c) =>
+          el.tags.name.toLowerCase().includes(c.toLowerCase().split(/[\s']/)[0])
+        )
+        if (!matchedChain) return null
+
+        return {
+          osmId: el.id,
+          name: el.tags.name,
+          cuisine: el.tags.cuisine ?? null,
+          lat: el.lat,
+          lng: el.lon,
+          menu: chainMenus[matchedChain],
+        }
+      })
+      .filter(Boolean)
+
+    await redis.set(cacheKey, JSON.stringify(restaurants), { EX: RESTAURANT_CACHE_TTL_SECONDS})
+    res.json(restaurants)
+    
+  } catch (err) {
+    next(err)
+  }
+})
 
 /** Restaurant Menu Query
  * Checks redis cache first.

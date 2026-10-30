@@ -9,7 +9,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed:chains": "tsx --env-file=.env scripts/seed-chain-menus.ts"
   },
   "repository": {
     "type": "git",
@@ -24,12 +25,14 @@
   "homepage": "https://github.com/ByteParadise/QuickBite-restaurant-service#readme",
   "dependencies": {
     "@bufbuild/protobuf": "^2.16.0",
+    "cors": "^2.8.6",
     "express": "^5.0.0",
     "kafkajs": "^2.2.4",
     "pg": "^8.23.1",
     "redis": "^6.3.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",

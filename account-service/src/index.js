@@ -17,9 +17,12 @@ app.get('/health', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: 'internal error' });
-});
+  if (err.status === 401) {
+    return res.status(401).json({ error: err.message })
+  }
+  console.error(err)
+  res.status(500).json({ error: 'internal error' })
+})
 
 async function main() {
   await ensureSchema();

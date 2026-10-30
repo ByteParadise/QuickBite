@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/db.js';
 import { publishAddressSaved } from './kafka.js';
+import { checkJwt } from '../middleware/auth.js';
 
 export const accountRouter = Router();
 
@@ -26,7 +27,7 @@ accountRouter.post('/profiles', async (req, res, next) => {
 });
 
 /** Get User Profile and Addresses */
-accountRouter.get('/profiles/:id', async (req, res, next) => {
+accountRouter.get('/profiles/:id', checkJwt, async (req, res, next) => {
   const { id } = req.params;
 
   try {
