@@ -3,3 +3,17 @@
 @theme {
   --color-accent: #aa3bff;
 }
+
+:root {
+  --bg: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16171d;
+  }
+}
+
+body {
+  background: var(--bg);
+}
