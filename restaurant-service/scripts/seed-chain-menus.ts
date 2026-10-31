@@ -28,9 +28,9 @@ async function harvestChain(name: string) {
   }
 
   const data = await res.json()
-  const matchKey = name.toLowerCase().split(/[\s']/)[0]
+  const normalizedChain = name.toLowerCase().replace(/[^a-z0-9]/g, '')
   return (data.menuItems ?? [])
-    .filter((item: any) => item.restaurantChain?.toLowerCase().includes(matchKey))
+    .filter((item: any) => item.restaurantChain?.toLowerCase().replace(/[^a-z0-9]/g, '').includes(normalizedChain))
     .map((item: any) => ({
       id: item.id,
       title: item.title,

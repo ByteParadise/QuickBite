@@ -10,7 +10,7 @@ interface MenuItem {
 }
 
 interface Restaurant {
-  osmId: number
+  placeId: string
   name: string
   cuisine: string | null
   lat: number
@@ -54,14 +54,15 @@ export default function Home() {
       <Navbar />
       <div className="p-6">
         <h1 className="text-red-500">QuickBite</h1>
-        <button onClick={updateLocation}>Update location</button>
+        {/* Restaurant fetch paused — resume with the button below when picking this back up */}
+        {/* <button onClick={updateLocation}>Update location</button> */}
 
         {loading && <p>Loading...</p>}
         {error && <p className="text-red-500">{error}</p>}
 
         <ul className="mt-4 flex flex-col gap-4">
           {restaurants.map((r) => (
-            <li key={r.osmId}>
+            <li key={r.placeId}>
               <p className="font-semibold">{r.name}{r.cuisine ? ` (${r.cuisine})` : ''}</p>
               <ul className="pl-4 text-sm text-gray-600">
                 {r.menu.map((item) => (

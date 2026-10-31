@@ -9,13 +9,33 @@ const chainMenus: Record<string, any[]> = JSON.parse(
   readFileSync(path.join(import.meta.dirname, '../data/chain-menus.json'), 'utf-8')
 )
 const CHAIN_NAMES = Object.keys(chainMenus)
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter'
+const GEOAPIFY_URL = 'https://api.geoapify.com/v2/places'
 const RESTAURANT_CACHE_TTL_SECONDS = 1800
-const MAX_OVERPASS_RESULTS = 50
 
 const MENU_CACHE_TTL_SECONDS = 30;
 
 export const restaurantRouter = Router();
+
+async function fetchNearbyRestaurants(lat: number, lng: number, radius: number) {
+  const params = new URLSearchParams({
+    categories: 'catering.restaurant',
+    filter: `circle:${lng},${lat},${radius}`,
+    bias: `proximity:${lng},${lat}`,
+    limit: '50',
+    apiKey: process.env.GEOAPIFY_API_KEY ?? '',
+  })
+
+  const res = await fetch(`${GEOAPIFY_URL}?${params}`)
+  if (!res.ok) {
+    throw new Error(`Geoapify request failed: ${res.status}`)
+  }
+  const data = await res.json()
+  return data.features ?? []
+}
+
+function normalizeName(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
 
 restaurantRouter.get('/restaurants', async (req, res, next) => {
   const lat = Number(req.query.lat)
@@ -34,29 +54,23 @@ restaurantRouter.get('/restaurants', async (req, res, next) => {
       return res.json(JSON.parse(cached))
     }
 
-    const nameRegex = CHAIN_NAMES.map((n) => n.split(/[\s']/)[0]).join('|')
-    const overpassQuery = `[out:json][timeout:25];node["amenity"="restaurant"]["name"~"${nameRegex}",i](around:${radius},${lat},${lng});out body ${MAX_OVERPASS_RESULTS};`
-    
-    const overpassRes = await fetch(OVERPASS_URL, { method: 'POST', body: overpassQuery})
-    if (!overpassRes.ok) {
-      throw new Error(`Overpass request failed: ${overpassRes.status}`)
-    }
-    const overpassData = await overpassRes.json()
+    const features = await fetchNearbyRestaurants(lat, lng, radius)
 
-    const restaurants = overpassData.elements
-      .filter((el: any) => el.tags?.name)
-      .map((el: any) => {
-        const matchedChain = CHAIN_NAMES.find((c) =>
-          el.tags.name.toLowerCase().includes(c.toLowerCase().split(/[\s']/)[0])
-        )
+    const restaurants = features
+      .map((f: any) => {
+        const name = f.properties?.name
+        if (!name) return null
+
+        const matchedChain = CHAIN_NAMES.find((c) => normalizeName(name).includes(normalizeName(c)))
+
         if (!matchedChain) return null
 
         return {
-          osmId: el.id,
-          name: el.tags.name,
-          cuisine: el.tags.cuisine ?? null,
-          lat: el.lat,
-          lng: el.lon,
+          placeId: f.properties.place_id,
+          name,
+          cuisine: null,
+          lat: f.properties.lat,
+          lng: f.properties.lon,
           menu: chainMenus[matchedChain],
         }
       })

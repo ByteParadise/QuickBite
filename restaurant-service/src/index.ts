@@ -1,9 +1,9 @@
 import express, { ErrorRequestHandler } from 'express';
 import cors from 'cors'
-import { restaurantRouter } from './services/restaurants.js';
+import { restaurantRouter } from './api/restaurants.js';
 import { redis } from './db/redis.js';
 import { ensureSchema } from './db/schema.js';
-import { connectProducer } from './services/kafka.js';
+import { connectProducer } from './api/kafka.js';
 
 const PORT = process.env.PORT ?? 4001;
 
