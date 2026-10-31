@@ -1,13 +1,7 @@
-
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Navbar from './components/Navbar'
-
-interface MenuItem {
-  id: string
-  title: string
-  image: string
-  price: number
-}
+import { useUserLocation } from '../context/LocationContext'
 
 interface Restaurant {
   placeId: string
@@ -15,60 +9,51 @@ interface Restaurant {
   cuisine: string | null
   lat: number
   lng: number
-  menu: MenuItem[]
 }
 
 export default function Home() {
-  const [restaurants, setRestuarants] = useState<Restaurant[]>([])
-  const [loading, setLoading] = useState(false)
+  const { lat, lng, loading: locationLoading, error: locationError } = useUserLocation()
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const updateLocation = () => {
-    setLoading(true)
-    setError(null)
+  useEffect(() => {
+    if (lat === null || lng === null) return
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords
-        try {
-          const res = await fetch(
-            `${import.meta.env.VITE_RESTAURANT_SERVICE_URL}/restaurants?lat=${latitude}&lng=${longitude}`
-          )
-          if (!res.ok) throw new Error(`request failed`)
-            setRestuarants(await res.json())
-        } catch {
-          setError('Failed to load restaurants')
-        } finally {
-          setLoading(false)
-        }
-      },
-      () => {
-        setError('Location permission denied')
+    const fetchRestaurants = async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_RESTAURANT_SERVICE_URL}/restaurants?lat=${lat}&lng=${lng}&radius=5000`
+        )
+        if (!res.ok) throw new Error('request failed')
+        setRestaurants(await res.json())
+      } catch {
+        setError('Failed to load restaurants')
+      } finally {
         setLoading(false)
       }
-    )
-  }
+    }
+
+    fetchRestaurants()
+  }, [lat, lng])
 
   return (
     <div>
       <Navbar />
       <div className="p-6">
-        <h1 className="text-red-500">QuickBite</h1>
-        {/* Restaurant fetch paused — resume with the button below when picking this back up */}
-        {/* <button onClick={updateLocation}>Update location</button> */}
+        {(locationLoading || loading) && <p>Loading...</p>}
+        {(locationError || error) && <p className="text-red-500">{locationError ?? error}</p>}
 
-        {loading && <p>Loading...</p>}
-        {error && <p className="text-red-500">{error}</p>}
-
-        <ul className="mt-4 flex flex-col gap-4">
+        <ul className="mt-4 flex flex-col gap-3">
           {restaurants.map((r) => (
             <li key={r.placeId}>
-              <p className="font-semibold">{r.name}{r.cuisine ? ` (${r.cuisine})` : ''}</p>
-              <ul className="pl-4 text-sm text-gray-600">
-                {r.menu.map((item) => (
-                  <li key={item.id}>{item.title} — ${item.price.toFixed(2)}</li>
-                ))}
-              </ul>
+              <Link
+                to={`/restaurants/${r.placeId}`}
+                state={{ name: r.name }}
+                className="block rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
+              >
+                <p className="font-semibold">{r.name}{r.cuisine ? ` (${r.cuisine})` : ''}</p>
+              </Link>
             </li>
           ))}
         </ul>
