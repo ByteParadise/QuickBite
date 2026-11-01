@@ -21,7 +21,11 @@ export default function CartDetail({ restaurant, items, onBack }: CartDetailProp
         <button type="button" onClick={onBack} className="text-sm text-gray-500 hover:underline">
           ← Back to Cart
         </button>
-        <h1 className="mt-2 mb-4 text-xl font-semibold">{restaurant.name}</h1>
+        <h1 className="mt-2 text-xl font-semibold">{restaurant.name}</h1>
+        {restaurant.address && (
+          <p className="text-sm text-gray-500">{restaurant.address}</p>
+        )}
+        <div className="mb-4" />
 
         <ul className="flex flex-col gap-3">
           {items.map((item) => (
@@ -65,14 +69,13 @@ export default function CartDetail({ restaurant, items, onBack }: CartDetailProp
           <span>${subtotal.toFixed(2)}</span>
         </div>
 
-        {/* Enable once the checkout flow exists. */}
-        <button
-          type="button"
-          disabled
-          className="mt-3 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        <Link
+          to={`/checkout/${encodeURIComponent(restaurant.placeId)}`}
+          onClick={closeOverlay}
+          className="mt-3 block w-full rounded-md bg-blue-600 px-4 py-3 text-center text-sm font-medium text-white hover:bg-blue-700"
         >
           Go to Checkout
-        </button>
+        </Link>
       </div>
     </div>
   )

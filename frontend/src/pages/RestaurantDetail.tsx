@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import { useCart, type CartRestaurant } from "../context/CartContext";
@@ -19,6 +19,8 @@ interface RestaurantLinkState {
   lat?: number
   lng?: number
 }
+
+const LocationMap = lazy(() => import("./components/LocationMap"));
 
 export default function RestaurantDetail() {
   const { placeId } = useParams()
@@ -80,6 +82,15 @@ export default function RestaurantDetail() {
 
         {loading && <p>Loading...</p>}
         {error && <p className="text-red-500">{error}</p>}
+
+        {state?.lat != null && state?.lng != null && (
+          <div className="mt-4">
+            <Suspense fallback={<div className="h-48 w-full rounded-lg bg-gray-100" />}>
+              <LocationMap lat={state.lat} lng={state.lng} label={name ?? 'Restaurant'} />
+            </Suspense>
+          </div>
+        )}
+
 
         <ul className="mt-4 flex flex-col gap-3">
           {menu.map((item) => (

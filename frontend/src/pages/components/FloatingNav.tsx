@@ -34,8 +34,9 @@ export default function FloatingNav() {
   const getLayout = (): ButtonLayout => {
     if (activeOverlay === 'cart') return isCartDetailOpen ? {} : { right: 'home' }
     if (activeOverlay === 'user') return { left: 'home' }
+    if (activeOverlay === 'addresses') return {}
     if (!isRouteEnabled) return {}
-    if (activeOverlay === 'addresses') return { left: 'home', right: 'cart' }
+
     return { left: 'user', right: 'cart' }
   }
 

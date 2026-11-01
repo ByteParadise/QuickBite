@@ -1,28 +1,72 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
+const SELECTED_ADDRESS_STORAGE_KEY = 'quickbite:selected-address:v1'
+
+export interface SelectedAddress {
+  address: string
+  lat: number
+  lng: number
+}
+
 interface LocationState {
   lat: number | null
   lng: number | null
   address: string | null
+  deviceAddress: string | null
+  selectedAddress: SelectedAddress | null
   loading: boolean
   error: string | null
+  selectAddress: (selected: SelectedAddress) => void
+  clearSelectedAddress: () => void
 }
 
 const LocationContext = createContext<LocationState | undefined>(undefined)
 
+function isSelectedAddress(value: unknown): value is SelectedAddress {
+  if (typeof value !== 'object' || value === null) return false
+  const s = value as Record<string, unknown>
+  return (
+    typeof s.address === 'string' &&
+    Number.isFinite(s.lat) &&
+    Number.isFinite(s.lng)
+  )
+}
+
+function loadSelectedAddress(): SelectedAddress | null {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(SELECTED_ADDRESS_STORAGE_KEY) ?? 'null')
+    return isSelectedAddress(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 export function LocationProvider({ children }: { children: ReactNode }) {
-  const [lat, setLat] = useState<number | null>(null)
-  const [lng, setLng] = useState<number | null>(null)
-  const [address, setAddress] = useState<string | null>(null)
+  const [deviceLat, setDeviceLat] = useState<number | null>(null)
+  const [deviceLng, setDeviceLng] = useState<number | null>(null)
+  const [deviceAddress, setDeviceAddress] = useState<string | null>(null)
+  const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(loadSelectedAddress)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      if (selectedAddress) {
+        localStorage.setItem(SELECTED_ADDRESS_STORAGE_KEY, JSON.stringify(selectedAddress))
+      } else {
+        localStorage.removeItem(SELECTED_ADDRESS_STORAGE_KEY)
+      }
+    } catch {
+      // Storage can be full or blocked; the selection still works for this visit.
+    }
+  }, [selectedAddress])
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords
-        setLat(latitude)
-        setLng(longitude)
+        setDeviceLat(latitude)
+        setDeviceLng(longitude)
 
         try {
           const res = await fetch(
@@ -30,7 +74,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           )
           if (res.ok) {
             const { address: resolvedAddress } = await res.json()
-            setAddress(resolvedAddress)
+            setDeviceAddress(resolvedAddress)
           }
         } catch {
           // address is optional — not fatal
@@ -46,11 +90,24 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <LocationContext.Provider value={{ lat, lng, address, loading, error }}>
+    <LocationContext.Provider
+      value={{
+        lat: selectedAddress?.lat ?? deviceLat,
+        lng: selectedAddress?.lng ?? deviceLng,
+        address: selectedAddress?.address ?? deviceAddress,
+        deviceAddress,
+        selectedAddress,
+        loading: selectedAddress ? false : loading,
+        error: selectedAddress ? null : error,
+        selectAddress: setSelectedAddress,
+        clearSelectedAddress: () => setSelectedAddress(null),
+      }}
+    >
       {children}
     </LocationContext.Provider>
   )
 }
+
 
 export function useUserLocation() {
   const context = useContext(LocationContext)

@@ -24,32 +24,46 @@ export default function Home() {
   useEffect(() => {
     if (lat === null || lng === null) return
 
+    const controller = new AbortController()
+
     const fetchRestaurants = async () => {
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_RESTAURANT_SERVICE_URL}/restaurants?lat=${lat}&lng=${lng}&radius=5000`
+          `${import.meta.env.VITE_RESTAURANT_SERVICE_URL}/restaurants?lat=${lat}&lng=${lng}&radius=5000`,
+          { signal: controller.signal }
         )
         if (!res.ok) throw new Error('request failed')
-        setRestaurants(await res.json())
+        const data: Restaurant[] = await res.json()
+        setRestaurants(data)
+        setError(null)
       } catch {
+        if (controller.signal.aborted) return
+        setRestaurants([])
         setError('Failed to load restaurants')
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
 
     fetchRestaurants()
+    return () => controller.abort()
   }, [lat, lng])
+
+  const hasLocation = lat !== null && lng !== null
+  const visibleRestaurants = hasLocation ? restaurants : []
+  const isLoading = locationLoading || (hasLocation && loading)
+
 
   return (
     <div>
       <Navbar />
       <div className="p-6">
-        {(locationLoading || loading) && <p>Loading...</p>}
+        {isLoading && <p>Loading...</p>}
+
         {(locationError || error) && <p className="text-red-500">{locationError ?? error}</p>}
 
         <ul className="mt-4 flex flex-col gap-3">
-          {restaurants.map((r) => (
+          {visibleRestaurants.map((r) => (
             <li
               key={r.placeId}
               className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4"

@@ -9,7 +9,7 @@ import FloatingNav from './FloatingNav'
 
 
 function LayoutContent() {
-  const { activeOverlay } = useOverlay()
+  const { activeOverlay, closeOverlay } = useOverlay()
 
   return (
     <div className="h-dvh bg-shell overflow-hidden">
@@ -17,14 +17,28 @@ function LayoutContent() {
         <div className="h-full overflow-y-auto">
           <Outlet />
         </div>
-        {/* Addresses — bottom sheet, leaves the home page visible at the top */}
+        {/* Addresses — dimmed background; tapping it closes the sheet */}
         <div
+          aria-hidden="true"
+          onClick={closeOverlay}
+          className={`fixed inset-0 z-10 bg-black/40 transition-opacity duration-300 ${
+            activeOverlay === 'addresses' ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        />
+
+        {/* Addresses — bottom sheet over the current page */}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="addresses-title"
+          inert={activeOverlay !== 'addresses'}
           className={`fixed inset-x-0 bottom-0 top-16 bg-white z-20 rounded-t-2xl shadow-lg transition-transform duration-300 ease-in-out overflow-y-auto ${
             activeOverlay === 'addresses' ? 'translate-y-0' : 'translate-y-full'
           }`}
         >
           <Addresses />
         </div>
+
 
         {/* User info — full-screen slide from the left */}
         <div

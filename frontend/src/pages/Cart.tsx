@@ -60,9 +60,7 @@ export default function Cart() {
       >
         ← Back
       </button>
-
       
-
       {groups.length === 0 ? (
         <p className="text-gray-500">Your cart is empty.</p>
       ) : (
@@ -74,6 +72,9 @@ export default function Cart() {
             return (
               <li key={restaurant.placeId} className="rounded-lg border border-gray-200 p-4">
                 <h2 className="truncate font-semibold">{restaurant.name}</h2>
+                {restaurant.address && (
+                  <p className="truncate text-sm text-gray-500">{restaurant.address}</p>
+                )}
                 <p className="text-sm text-gray-500">
                   {itemCount} {itemCount === 1 ? 'item' : 'items'} · ${subtotal.toFixed(2)}
                 </p>
