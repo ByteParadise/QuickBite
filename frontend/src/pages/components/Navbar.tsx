@@ -1,4 +1,3 @@
-import { useAuth0 } from '@auth0/auth0-react'
 import { FiBell, FiMapPin, FiChevronDown } from 'react-icons/fi'
 import { useUserLocation } from '../../context/LocationContext'
 import { useOverlay } from '../../context/OverlayContext'

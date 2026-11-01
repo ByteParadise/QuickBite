@@ -2,11 +2,15 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import { useUserLocation } from '../context/LocationContext'
+import RestaurantMeta from './components/RestaurantMeta'
+
+
 
 interface Restaurant {
   placeId: string
   name: string
   cuisine: string | null
+  address: string | null
   lat: number
   lng: number
 }
@@ -46,13 +50,22 @@ export default function Home() {
 
         <ul className="mt-4 flex flex-col gap-3">
           {restaurants.map((r) => (
-            <li key={r.placeId}>
+            <li
+              key={r.placeId}
+              className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4"
+            >
+              <div className="min-w-0">
+                <p className="font-semibold">{r.name}{r.cuisine ? ` (${r.cuisine})` : ''}</p>
+                <RestaurantMeta lat={r.lat} lng={r.lng} address={r.address} />
+              </div>
+
               <Link
                 to={`/restaurants/${r.placeId}`}
-                state={{ name: r.name }}
-                className="block rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
+                state={{ name: r.name, address: r.address, lat: r.lat, lng: r.lng }}
+                aria-label={`View menu for ${r.name}`}
+                className="shrink-0 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
-                <p className="font-semibold">{r.name}{r.cuisine ? ` (${r.cuisine})` : ''}</p>
+                View Menu
               </Link>
             </li>
           ))}

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
-import { FiPlus } from "react-icons/fi";
 import Navbar from "./components/Navbar";
-import { useCart } from "../context/CartContext";
+import { useCart, type CartRestaurant } from "../context/CartContext";
+import QuantityStepper from "./components/QuantityStepper";
+import MenuItemImage from "./components/MenuItemImage";
+import RestaurantMeta from "./components/RestaurantMeta";
 
 interface MenuItem {
   id: number
@@ -11,11 +13,29 @@ interface MenuItem {
   price: number
 }
 
+interface RestaurantLinkState {
+  name?: string
+  address?: string | null
+  lat?: number
+  lng?: number
+}
+
 export default function RestaurantDetail() {
   const { placeId } = useParams()
   const location = useLocation()
-  const name = (location.state as { name?: string } | null)?.name
-  const { addItem } = useCart()
+  const state = location.state as RestaurantLinkState | null
+  const name = state?.name
+  const restaurant: CartRestaurant | null = placeId && name
+    ? {
+        placeId,
+        name,
+        address: state?.address ?? null,
+        lat: state?.lat ?? null,
+        lng: state?.lng ?? null,
+      }
+    : null
+
+  const { items, addItem, removeItem } = useCart()
 
   const [menu, setMenu] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,23 +72,33 @@ export default function RestaurantDetail() {
       <div className="p-6">
         <Link to="/" className="text-sm text-gray-500 hover:underline">← Back</Link>
         <h1 className="text-xl font-semibold mt-2">{name ?? 'Restaurant'}</h1>
+        <RestaurantMeta
+          lat={state?.lat ?? null}
+          lng={state?.lng ?? null}
+          address={state?.address ?? null}
+        />
 
         {loading && <p>Loading...</p>}
         {error && <p className="text-red-500">{error}</p>}
 
         <ul className="mt-4 flex flex-col gap-3">
           {menu.map((item) => (
-            <li key={item.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
-              <div>
-                <p className="font-medium">{item.title}</p>
-                <p className="text-sm text-gray-500">${item.price.toFixed(2)}</p>
+            <li key={item.id} className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <MenuItemImage src={item.image} />
+                <div className="min-w-0">
+                  <p className="font-medium">{item.title}</p>
+                  <p className="text-sm text-gray-500">${item.price.toFixed(2)}</p>
+                </div>
               </div>
-              <button
-                onClick={() => addItem({ id: item.id, title: item.title, price: item.price })}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200"
-              >
-                <FiPlus className="w-4 h-4" />
-              </button>
+
+              <QuantityStepper
+                itemName={item.title}
+                quantity={items.find((i) => i.id === item.id && i.restaurant.placeId === placeId)?.quantity ?? 0}
+                onIncrease={() => restaurant && addItem({ id: item.id, title: item.title, price: item.price, restaurant })}
+                onDecrease={() => placeId && removeItem(placeId, item.id)}
+              />
+
             </li>
           ))}
         </ul>
