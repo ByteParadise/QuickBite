@@ -5,9 +5,10 @@ import Login from './pages/Login'
 import RestaurantDetail from './pages/RestaurantDetail'
 import type { RouteHandle } from './pages/components/FloatingNav'
 import Checkout from './pages/Checkout'
+import AddCard from './pages/AddCard'
 
 
-const router = createBrowserRouter([
+export const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
       { path: '/login', element: <Login /> },
       { path: '/restaurants/:placeId', element: <RestaurantDetail />},
       { path: '/checkout/:placeId', element: <Checkout /> },
+      { path: '/cards/new', element: <AddCard /> },
     ],
   },
 ])

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import { useUserLocation } from '../context/LocationContext'
 import RestaurantMeta from './components/RestaurantMeta'
@@ -20,6 +20,7 @@ export default function Home() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const loginFailed = (useLocation().state as { loginFailed?: boolean } | null)?.loginFailed
 
   useEffect(() => {
     if (lat === null || lng === null) return
@@ -58,6 +59,7 @@ export default function Home() {
     <div>
       <Navbar />
       <div className="p-6">
+        {loginFailed && <p className="mb-2 text-sm text-red-500">Login didn't complete. Please try again.</p>}
         {isLoading && <p>Loading...</p>}
 
         {(locationError || error) && <p className="text-red-500">{locationError ?? error}</p>}

@@ -1,7 +1,10 @@
-import { Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { clearLoginResume, takeLoginResume } from '../../utils/loginResume'
 import { LocationProvider } from '../../context/LocationContext'
 import { OverlayProvider, useOverlay } from '../../context/OverlayContext'
 import { CartProvider } from '../../context/CartContext'
+import { AccountProvider } from '../../context/AccountContext'
 import UserInfo from '../UserInfo'
 import Cart from '../Cart'
 import Addresses from '../Addresses'
@@ -9,7 +12,28 @@ import FloatingNav from './FloatingNav'
 
 
 function LayoutContent() {
-  const { activeOverlay, closeOverlay } = useOverlay()
+  const { activeOverlay, openOverlay, closeOverlay } = useOverlay()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+
+    // Auth0 returns failed logins here with an error in the URL.
+    if (params.has('error') && params.has('state')) {
+      clearLoginResume()
+      navigate('/', { replace: true, state: { loginFailed: true } })
+      return
+    }
+
+    if (location.pathname === '/login') return
+
+    const resume = takeLoginResume()
+    if (resume?.type === 'addresses') {
+      openOverlay('addresses')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search])
 
   return (
     <div className="h-dvh bg-shell overflow-hidden">
@@ -36,7 +60,7 @@ function LayoutContent() {
             activeOverlay === 'addresses' ? 'translate-y-0' : 'translate-y-full'
           }`}
         >
-          <Addresses />
+          <Addresses key={activeOverlay === 'addresses' ? 'open' : 'closed'} />
         </div>
 
 
@@ -67,9 +91,11 @@ export default function Layout() {
   return (
     <LocationProvider>
       <OverlayProvider>
-        <CartProvider>
-          <LayoutContent />
-        </CartProvider>
+        <AccountProvider>
+          <CartProvider>
+            <LayoutContent />
+          </CartProvider>
+        </AccountProvider>
       </OverlayProvider>
     </LocationProvider>
   )

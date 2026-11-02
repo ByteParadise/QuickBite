@@ -1,12 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './app'
+import App, { router } from './app'
 import { Auth0Provider, type AppState } from '@auth0/auth0-react'
 
-// Already set by default, but explicitly setting it
+// Only allow paths inside this app, so a tampered value can't redirect elsewhere.
+const isInternalPath = (path: unknown): path is string =>
+  typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')
+
 const onRedirectCallback = (appState?: AppState) => {
-  window.history.replaceState({}, document.title, appState?.returnTo || window.location.pathname)
+  const { path, state } = appState?.origin ?? {}
+  router.navigate(isInternalPath(path) ? path : '/', { replace: true, state })
 }
 
 createRoot(document.getElementById('root')!).render(

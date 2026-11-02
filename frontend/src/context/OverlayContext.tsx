@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
+import type { AddressResult } from '../hooks/useAddressSearch'
 
 type OverlayKind = 'user' | 'cart' | 'addresses' | null
 
@@ -9,6 +10,9 @@ interface OverlayState {
   closeOverlay: () => void
   openCartDetail: (placeId: string) => void
   closeCartDetail: () => void
+  addressDetail: AddressResult | null
+  openAddressDetail: (address: AddressResult) => void
+  closeAddressDetail: () => void
 }
 
 const OverlayContext = createContext<OverlayState | undefined>(undefined)
@@ -16,10 +20,12 @@ const OverlayContext = createContext<OverlayState | undefined>(undefined)
 export function OverlayProvider({ children }: { children: ReactNode }) {
   const [activeOverlay, setActiveOverlay] = useState<OverlayKind>(null)
   const [cartRestaurantId, setCartRestaurantId] = useState<string | null>(null)
+  const [addressDetail, setAddressDetail] = useState<AddressResult | null>(null)
 
   const closeOverlay = () => {
     setActiveOverlay(null)
     setCartRestaurantId(null)
+    setAddressDetail(null)
   }
 
   return (
@@ -31,6 +37,9 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
         closeOverlay,
         openCartDetail: setCartRestaurantId,
         closeCartDetail: () => setCartRestaurantId(null),
+        addressDetail,
+        openAddressDetail: setAddressDetail,
+        closeAddressDetail: () => setAddressDetail(null),
       }}
     >
       {children}

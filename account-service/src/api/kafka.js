@@ -29,7 +29,9 @@ export async function publishAddressSaved({
   line2,
   city,
   state,
-  postalCode 
+  postalCode,
+  lat,
+  lng,
 }) {
   const message = create(AddressSavedSchema, {
     eventId: crypto.randomUUID(),
@@ -43,8 +45,8 @@ export async function publishAddressSaved({
       state,
       postalCode,
       countryCode: 'US',
-      latitude: 0,
-      longitude: 0,
+      latitude: lat,
+      longitude: lng,
     }),
   });
 

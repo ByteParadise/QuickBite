@@ -8,7 +8,7 @@ import { URLSearchParams } from 'url';
 import { rateLimit } from 'express-rate-limit';
 
 
-const ADDRESS_SEARCH_URL = 'https://api.geoapify.com/v1/geocode/search'
+const ADDRESS_SEARCH_URL = 'https://api.geoapify.com/v1/geocode/autocomplete'
 const ADDRESS_SEARCH_MIN_LENGTH = 3
 const ADDRESS_SEARCH_MAX_LENGTH = 200
 const ADDRESS_SEARCH_RESULT_LIMIT = 5
@@ -18,7 +18,7 @@ const ADDRESS_SEARCH_EXACT_CONFIDENCE = 0.9
 
 const addressSearchLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 10,
+  limit: 30,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'too many address searches, try again shortly' },
@@ -169,9 +169,13 @@ restaurantRouter.get('/reverse-geocode', async (req, res, next) => {
     }
     const data = await geoRes.json()
     const properties = data.features?.[0]?.properties
-    const address = properties ? formatAddress(properties) : null
-
-    const result = { address }
+    const result = properties
+      ? {
+          address: formatAddress(properties),
+          ...toAddressParts(properties),
+          isComplete: isCompleteAddress(properties),
+        }
+      : { address: null, isComplete: false }
     await redis.set(cacheKey, JSON.stringify(result), { EX: GEOCODE_CACHE_TTL_SECONDS})
     res.json(result)
   } catch (err) {
@@ -188,9 +192,23 @@ function formatAddress(r: any): string {
   return joinParts([street || r.name, r.city, region], ', ')
 }
 
+function toAddressParts(r: any) {
+  return {
+    line1: joinParts([r.housenumber, r.street], ' ') || null,
+    city: r.city ?? null,
+    state: r.state_code ?? null,
+    postalCode: r.postcode ?? null,
+  }
+}
+
+/** A delivery address needs all of these; a city or street alone isn't enough. */
+function isCompleteAddress(r: any): boolean {
+  return Boolean(r.housenumber && r.street && r.city && r.state_code && r.postcode)
+}
 
 /** Address Search
- * Runs once per explicit user search. Not cached, and the text is never logged,
+ * Only returns complete addresses, so anything selectable can also be saved.
+ * Called as the user types, after a pause. Not cached, and the text is never logged,
  * because it can contain a home address. */
 restaurantRouter.get('/address-search', addressSearchLimiter, async (req, res, next) => {
   const text = typeof req.query.text === 'string' ? req.query.text.trim() : ''
@@ -232,7 +250,7 @@ restaurantRouter.get('/address-search', addressSearchLimiter, async (req, res, n
     const isExactMatch = (r: any) => (r.rank?.confidence ?? 0) >= ADDRESS_SEARCH_EXACT_CONFIDENCE
 
     const results = (data.results ?? [])
-      .filter((r: any) => (r.rank?.confidence ?? 0) > 0)
+      .filter((r: any) => (r.rank?.confidence ?? 0) > 0 && isCompleteAddress(r))
       .sort((a: any, b: any) =>
         Number(isExactMatch(b)) - Number(isExactMatch(a)) ||
         (a.distance ?? Infinity) - (b.distance ?? Infinity)
@@ -241,6 +259,7 @@ restaurantRouter.get('/address-search', addressSearchLimiter, async (req, res, n
       .map((r: any) => ({
         placeId: r.place_id,
         address: formatAddress(r),
+        ...toAddressParts(r),
         lat: r.lat,
         lng: r.lon,
       }))

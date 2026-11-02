@@ -1,17 +1,25 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useUserLocation } from '../context/LocationContext'
 import { useOverlay } from '../context/OverlayContext'
+import CardInfoSection from './components/CardInfoSection'
+import { loadSelectedCardId, saveSelectedCardId } from '../utils/selectedCard'
 
 const LocationMap = lazy(() => import('./components/LocationMap'))
 
 export default function Checkout() {
   const { placeId } = useParams()
   const { items } = useCart()
-  const { lat, lng, address, loading, error } = useUserLocation()
+  const { lat, lng, address, isAddressComplete, loading, error } = useUserLocation()
   const { openOverlay, openCartDetail } = useOverlay()
   const navigate = useNavigate()
+  const [selectedCardId, setSelectedCardId] = useState(loadSelectedCardId)
+
+  const handleSelectCard = (cardId: string) => {
+    setSelectedCardId(cardId)
+    saveSelectedCardId(cardId)
+  }
 
   const orderItems = items.filter((item) => item.restaurant.placeId === placeId)
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
@@ -55,6 +63,18 @@ export default function Checkout() {
             </p>
           )}
           {address && <p className="mt-2 text-sm">{address}</p>}
+          {!isAddressComplete && (
+            <div className="mt-2">
+              <p className="text-sm text-red-500">A full street address is needed for delivery.</p>
+              <button
+                type="button"
+                onClick={() => openOverlay('addresses')}
+                className="mt-1 text-sm font-medium text-blue-600 hover:underline"
+              >
+                Choose an address
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="mt-6">
@@ -69,6 +89,8 @@ export default function Checkout() {
             ))}
           </ul>
         </section>
+
+        <CardInfoSection selectedCardId={selectedCardId} onSelect={handleSelectCard} />
       </div>
 
       <div className="shrink-0 border-t border-gray-200 bg-white px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
