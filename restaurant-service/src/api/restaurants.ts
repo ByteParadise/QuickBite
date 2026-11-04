@@ -1,12 +1,9 @@
 import { Router } from 'express';
-import { db } from '../db/db.js';
 import { redis } from '../db/redis.js';
-import { publishMenuUpdated } from './kafka.js';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { URLSearchParams } from 'url';
 import { rateLimit } from 'express-rate-limit';
-
 
 const ADDRESS_SEARCH_URL = 'https://api.geoapify.com/v1/geocode/autocomplete'
 const ADDRESS_SEARCH_MIN_LENGTH = 3
@@ -14,7 +11,6 @@ const ADDRESS_SEARCH_MAX_LENGTH = 200
 const ADDRESS_SEARCH_RESULT_LIMIT = 5
 const ADDRESS_SEARCH_TIMEOUT_MS = 8000
 const ADDRESS_SEARCH_EXACT_CONFIDENCE = 0.9
-
 
 const addressSearchLimiter = rateLimit({
   windowMs: 60_000,
@@ -33,9 +29,6 @@ const GEOAPIFY_URL = 'https://api.geoapify.com/v2/places'
 const RESTAURANT_CACHE_TTL_SECONDS = 1800
 const REVERSE_GEOCODE_URL = 'https://api.geoapify.com/v1/geocode/reverse'
 const GEOCODE_CACHE_TTL_SECONDS = 1800
-
-const MENU_CACHE_TTL_SECONDS = 30;
-
 export const restaurantRouter = Router();
 
 async function fetchNearbyRestaurants(lat: number, lng: number, radius: number) {
@@ -63,6 +56,10 @@ function matchChain(name: string): string | undefined {
   return CHAIN_NAMES.find((c) => normalizeName(name).includes(normalizeName(c)))
 }
 
+/** Nearby Restaurants
+ * Geoapify places lookup, filtered down to recognized chains only (via
+ * matchChain) since menu data only exists for those. Cached per
+ * lat/lng/radius bucket to avoid repeat Geoapify calls on minor movement. */
 restaurantRouter.get('/restaurants', async (req, res, next) => {
   const lat = Number(req.query.lat)
   const lng = Number(req.query.lng)
@@ -109,9 +106,9 @@ restaurantRouter.get('/restaurants', async (req, res, next) => {
   }
 })
 
-/** Nearby-restaurant Menu Lookup (Geoapify/chain-harvest flow)
- * Distinct path from the legacy /restaurants/:restaurantId/menu below —
- * same path shape would silently collide in Express's router. */
+/** Nearby-restaurant Menu Lookup
+ * Returns the harvested chain menu for a matched restaurant name, not a
+ * per-restaurant-id lookup — chains share one menu across all their locations. */
 restaurantRouter.get('/restaurants/nearby/:placeId/menu', async (req, res, next) => {
   const { placeId } = req.params
   const name = typeof req.query.name === 'string' ? req.query.name : ''
@@ -141,6 +138,10 @@ restaurantRouter.get('/restaurants/nearby/:placeId/menu', async (req, res, next)
   }
 })
 
+/** Reverse Geocode
+ * Proxies Geoapify so the API key stays server-side. Returns isComplete
+ * alongside the formatted address, since a device location can resolve to
+ * only a city or street — not enough for delivery. */
 restaurantRouter.get('/reverse-geocode', async (req, res, next) => {
   const lat = Number(req.query.lat)
   const lng = Number(req.query.lng)
@@ -269,104 +270,3 @@ restaurantRouter.get('/address-search', addressSearchLimiter, async (req, res, n
     next(err)
   }
 })
-
-
-/** Restaurant Menu Query
- * Checks redis cache first.
- * If not cacahed, execute query and cache the result. */
-restaurantRouter.get('/restaurants/:restaurantId/menu', async (req, res, next) => {
-  const { restaurantId } = req.params;
-  // menu is scoped to each restaurant
-  const cacheKey = `menu:${restaurantId}`;
-
-  try {
-    // Check redis cache first and return its result if cached
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return res.json(JSON.parse(cached));
-    }
-
-    // If menu is not cached, query the db
-    const restaurantResult = await db.query(
-      'SELECT id, name FROM restaurants WHERE id = $1',
-      [restaurantId]
-    );
-    const restaurant = restaurantResult.rows[0];
-    if (!restaurant) {
-      return res.status(404).json({ error: 'restaurant not found' });
-    }
-
-    const itemsResult = await db.query(
-      'SELECT id, name, price_minor_units, currency, available FROM menu_items WHERE restaurant_id = $1 ORDER BY id',
-      [restaurantId]
-    );
-
-    const menu = {
-      restaurantId: restaurant.id,
-      name: restaurant.name,
-      items: itemsResult.rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        priceMinorUnits: Number(row.price_minor_units),
-        currency: row.currency,
-        available: row.available,
-      }))
-    };
-
-    // Cache the query with TTL
-    await redis.set(cacheKey, JSON.stringify(menu), { EX: MENU_CACHE_TTL_SECONDS });
-
-    res.json(menu);
-  } catch (err) {
-    next(err);
-  }
-});
-
-/** Update Menu Detail
- * Once updated, invalidate redis cache.
- * Then, produce MenuUpdated Kafka message. */
-restaurantRouter.patch('/restaurants/:restaurantId/menu/:itemId', async (req, res, next) => {
-  const { restaurantId, itemId } = req.params;
-  const { name, priceMinorUnits, available } = req.body;
-
-  try {
-    const existing = await db.query(
-      'SELECT id, name, price_minor_units, currency, available FROM menu_items WHERE id = $1 AND restaurant_id = $2',
-      [itemId, restaurantId]
-    );
-    const item = existing.rows[0];
-    if (!item) {
-      return res.status(404).json({ error: 'menu item not found' });
-    }
-
-    const updated = {
-      name: name ?? item.name,
-      priceMinorUnits: priceMinorUnits ?? Number(item.price_minor_units),
-      available: available ?? item.available,
-    };
-
-    // Update the menu
-    await db.query(
-      'UPDATE menu_items SET name = $1, price_minor_units = $2, available = $3 WHERE id = $4',
-      [updated.name, updated.priceMinorUnits, updated.available, itemId]
-    );
-
-    // Invalidate cache since there is a change to the menu
-    await redis.del(`menu:${restaurantId}`);
-
-    const updatedItem = {
-      id: item.id,
-      name: item.name,
-      priceMinorUnits: updated.priceMinorUnits,
-      currency: item.currency,
-      available: updated.available,
-    };
-
-    // Produce MenuUpdated message
-    await publishMenuUpdated({ restaurantId, updatedItem: updatedItem });
-
-    res.json(updatedItem);
-  } catch (err) {
-    next(err);
-  }
-});

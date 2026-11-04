@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/db.js';
-import { publishAddressSaved } from './kafka.js';
 import { stripe } from './stripe.js';
 import { checkJwt } from '../middleware/auth.js';
 import { requireAccount } from '../middleware/account.js';
@@ -98,14 +97,7 @@ accountRouter.post('/accounts/me/addresses', requireAccount, async (req, res, ne
       [crypto.randomUUID(), req.account.id, label ?? null, line1, line2 ?? null, city, state, postalCode, lat, lng, Boolean(isDefault)]
     );
     const address = toAddressResponse(result.rows[0]);
-
-    // A failed event shouldn't undo an address that has already been saved.
-    try {
-      await publishAddressSaved({ customerId: req.account.id, addressId: address.id, line1, line2, city, state, postalCode, lat, lng });
-    } catch (err) {
-      console.error('failed to publish AddressSaved:', err);
-    }
-
+    
     res.status(201).json(address);
   } catch (err) {
     next(err);

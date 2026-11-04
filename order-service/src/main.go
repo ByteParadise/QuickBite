@@ -12,6 +12,9 @@ import (
 	"quickbite-order-service/src/middleware"
 )
 
+import "github.com/joho/godotenv"
+
+
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	api.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
@@ -44,7 +47,11 @@ func withCORS(next http.Handler) http.Handler {
 	})
 }
 
+
+
 func main() {
+	godotenv.Load()
+	
 	var ctx context.Context = context.Background()
 	db, err := orderdb.ConnectDB(ctx)
 	if err != nil {

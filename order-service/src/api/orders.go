@@ -6,8 +6,6 @@ import (
 	"log"
 	"math"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,15 +13,6 @@ import (
 	"quickbite-order-service/src/middleware"
 )
 
-var httpClient = &http.Client{Timeout: 5 * time.Second}
-
-// Returns Restaurant Service URL
-func restaurantServiceURL() string {
-	if url := os.Getenv("RESTAURANT_SERVICE_URL"); url != "" {
-		return url
-	}
-	return "http://localhost:4001"
-}
 
 /* Write response and returns */
 func WriteJSON(w http.ResponseWriter, status int, body any) {
@@ -32,29 +21,6 @@ func WriteJSON(w http.ResponseWriter, status int, body any) {
 	if err := json.NewEncoder(w).Encode(body); err != nil {
 		log.Printf("failed to write response: %v", err)
 	}
-}
-
-// fetchMenu is kept for the Kafka/Redis wiring it originally proved out;
-// MakeOrdersHandler no longer calls it — checkout trusts the cart instead of
-// re-validating against restaurant-service's menu.
-func fetchMenu(restaurantID string) (*menuResponse, int, error) {
-	url := fmt.Sprintf("%s/restaurants/%s/menu", restaurantServiceURL(), restaurantID)
-
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, resp.StatusCode, fmt.Errorf("restaurant-service returned status %d", resp.StatusCode)
-	}
-
-	var menu menuResponse
-	if err := json.NewDecoder(resp.Body).Decode(&menu); err != nil {
-		return nil, resp.StatusCode, err
-	}
-	return &menu, resp.StatusCode, nil
 }
 
 const orderCurrency = "usd"

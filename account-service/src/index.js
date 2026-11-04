@@ -1,7 +1,6 @@
 import express from 'express';
 import { accountRouter } from './api/accounts.js';
 import { ensureSchema } from './db/schema.js';
-import { connectProducer } from './api/kafka.js';
 import cors from 'cors';
 
 const PORT = process.env.PORT ?? 4003;
@@ -29,7 +28,6 @@ app.use((err, req, res, next) => {
 
 async function main() {
   await ensureSchema();
-  await connectProducer();
   app.listen(PORT, () => {
     console.log(`account-service listening on port ${PORT}`);
   });
