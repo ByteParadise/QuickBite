@@ -7,11 +7,11 @@ import (
 	"os"
 
 	orderdb "quickbite-order-service/src/db"
-	services "quickbite-order-service/src/services"
+  api "quickbite-order-service/src/api"
 )
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	services.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+  api.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func main() {
@@ -29,8 +29,8 @@ func main() {
 	}
 
 	// Kafka Event Listeners
-	go services.ConsumeAddressSaved(ctx, db)
-	go services.ConsumeMenuUpdated(ctx, db)
+	go  api.ConsumeAddressSaved(ctx, db)
+	go  api.ConsumeMenuUpdated(ctx, db)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -40,7 +40,7 @@ func main() {
 	/* Multiplexer: this handles each incoming HTTP request */
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", healthHandler)
-	mux.HandleFunc("POST /orders", services.MakeOrdersHandler(db))
+	mux.HandleFunc("POST /orders",  api.MakeOrdersHandler(db))
 
 	log.Printf("order-service listening on port %s", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {

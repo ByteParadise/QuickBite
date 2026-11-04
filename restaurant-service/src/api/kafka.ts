@@ -5,7 +5,6 @@ import crypto from 'crypto';
 import { MenuUpdatedSchema, MenuItemSchema } from '../../gen/node/quickbite/restaurant/v1/menu_events_pb.js';
 import { topic } from '../../gen/node/quickbite/kafka/v1/options_pb.js';
 
-
 /** Get kafka topic name for MenuUpdated message */ 
 export const MENU_UPDATED_TOPIC = getOption(MenuUpdatedSchema, topic);
 

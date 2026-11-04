@@ -1,12 +1,14 @@
 import express, { ErrorRequestHandler } from 'express';
-import { restaurantRouter } from './services/restaurants.js';
+import cors from 'cors'
+import { restaurantRouter } from './api/restaurants.js';
 import { redis } from './db/redis.js';
 import { ensureSchema } from './db/schema.js';
-import { connectProducer } from './services/kafka.js';
+import { connectProducer } from './api/kafka.js';
 
 const PORT = process.env.PORT ?? 4001;
 
 const app = express();
+app.use(cors({ origin: 'http://localhost:5173' }))
 app.use(express.json());
 // Each endpoint is registered with router
 app.use(restaurantRouter);
