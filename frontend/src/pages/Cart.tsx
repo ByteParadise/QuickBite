@@ -40,7 +40,11 @@ export default function Cart() {
 
   return (
     <div className="p-6 pb-24">
-      <div className="mt-2 flex items-center justify-between gap-4">
+      <button type="button" onClick={closeOverlay} className="text-sm text-gray-500 hover:underline">
+        ← Back
+      </button>
+
+      <div className="mt-2 mb-4 flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold">Carts</h1>
 
         {/* Enable once order history exists. */}
@@ -53,14 +57,6 @@ export default function Cart() {
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={closeOverlay}
-        className="mt-1 mb-4 text-sm text-gray-500 hover:underline"
-      >
-        ← Back
-      </button>
-      
       {groups.length === 0 ? (
         <p className="text-gray-500">Your cart is empty.</p>
       ) : (
@@ -95,6 +91,7 @@ export default function Cart() {
                       address: restaurant.address,
                       lat: restaurant.lat,
                       lng: restaurant.lng,
+                      cameFromCart: 'cartList',
                     }}
                     onClick={closeOverlay}
                     aria-label={`View store for ${restaurant.name}`}

@@ -10,6 +10,12 @@ interface ManageRowProps {
   onClick?: () => void
 }
 
+function getInitials(name?: string | null): string {
+  if (!name) return '?'
+  const parts = name.trim().split(/\s+/)
+  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?'
+}
+
 /** Rows without an onClick are disabled until their page exists. */
 function ManageRow({ icon: Icon, label, onClick }: ManageRowProps) {
   return (
@@ -39,24 +45,44 @@ export default function UserInfo() {
       {isLoading ? (
         <p>Loading...</p>
       ) : isAuthenticated ? (
-        <p>{user?.name}</p>
+        <div className="flex items-center gap-4">
+          {user?.picture ? (
+            <img src={user.picture} alt="" className="h-16 w-16 shrink-0 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gray-200 text-lg font-semibold text-gray-600">
+              {getInitials(user?.name)}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{user?.name}</p>
+            {user?.email && <p className="truncate text-sm text-gray-500">{user.email}</p>}
+          </div>
+        </div>
       ) : (
-        <Link to="/login" onClick={closeOverlay} className="text-blue-600 hover:underline">Log in</Link>
+        <Link
+          to="/login"
+          onClick={closeOverlay}
+          className="block w-full rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Log in
+        </Link>
       )}
 
-      <div className="mt-6 flex flex-col gap-3">
+      <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6">
         <ManageRow icon={FiMapPin} label="Manage addresses" onClick={() => openOverlay('addresses')} />
         <ManageRow icon={FiPackage} label="Manage orders" />
         <ManageRow icon={FiCreditCard} label="Manage payments" />
       </div>
 
       {isAuthenticated && (
-        <button
-          onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-          className="mt-6 text-sm text-gray-600 hover:underline"
-        >
-          Log out
-        </button>
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+            className="text-sm text-gray-600 hover:underline"
+          >
+            Log out
+          </button>
+        </div>
       )}
     </div>
   )

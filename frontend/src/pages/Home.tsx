@@ -4,8 +4,6 @@ import Navbar from './components/Navbar'
 import { useUserLocation } from '../context/LocationContext'
 import RestaurantMeta from './components/RestaurantMeta'
 
-
-
 interface Restaurant {
   placeId: string
   name: string
@@ -53,7 +51,6 @@ export default function Home() {
   const hasLocation = lat !== null && lng !== null
   const visibleRestaurants = hasLocation ? restaurants : []
   const isLoading = locationLoading || (hasLocation && loading)
-
 
   return (
     <div>

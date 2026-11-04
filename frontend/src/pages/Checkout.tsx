@@ -27,11 +27,11 @@ export default function Checkout() {
   if (orderItems.length === 0) {
     return (
       <div className="p-6">
-        <h1 className="text-xl font-semibold">Checkout</h1>
-        <p className="mt-2 text-gray-500">There are no items to check out.</p>
-        <Link to="/" className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline">
-          Back to restaurants
+        <Link to="/" className="text-sm text-gray-500 hover:underline">
+          ← Back
         </Link>
+        <h1 className="mt-2 text-xl font-semibold">Checkout</h1>
+        <p className="mt-2 text-gray-500">There are no items to check out.</p>
       </div>
     )
   }
@@ -47,7 +47,7 @@ export default function Checkout() {
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
         <button type="button" onClick={backToCart} className="text-sm text-gray-500 hover:underline">
-          ← Back to Cart
+          ← Back
         </button>
         <h1 className="mt-2 text-xl font-semibold">Checkout</h1>
 
@@ -80,6 +80,9 @@ export default function Checkout() {
         <section className="mt-6">
           <h2 className="mb-2 text-sm font-semibold text-gray-500">Order summary</h2>
           <p className="font-medium">{orderItems[0].restaurant.name}</p>
+          {orderItems[0].restaurant.address && (
+            <p className="text-sm text-gray-500">{orderItems[0].restaurant.address}</p>
+          )}
           <ul className="mt-2 flex flex-col gap-2">
             {orderItems.map((item) => (
               <li key={item.id} className="flex justify-between gap-4 text-sm">

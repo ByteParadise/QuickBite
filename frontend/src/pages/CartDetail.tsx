@@ -19,7 +19,7 @@ export default function CartDetail({ restaurant, items, onBack }: CartDetailProp
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
         <button type="button" onClick={onBack} className="text-sm text-gray-500 hover:underline">
-          ← Back to Cart
+          ← Back
         </button>
         <h1 className="mt-2 text-xl font-semibold">{restaurant.name}</h1>
         {restaurant.address && (
@@ -55,6 +55,7 @@ export default function CartDetail({ restaurant, items, onBack }: CartDetailProp
             address: restaurant.address,
             lat: restaurant.lat,
             lng: restaurant.lng,
+            cameFromCart: 'cartDetail',
           }}
           onClick={closeOverlay}
           className="mt-3 block rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium hover:bg-gray-50"

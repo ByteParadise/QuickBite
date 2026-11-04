@@ -19,13 +19,26 @@ const OverlayContext = createContext<OverlayState | undefined>(undefined)
 
 export function OverlayProvider({ children }: { children: ReactNode }) {
   const [activeOverlay, setActiveOverlay] = useState<OverlayKind>(null)
+  // Addresses can be opened from inside another overlay (e.g. Account) — closing it
+  // should return there instead of dropping all the way out.
+  const [addressesReturnTo, setAddressesReturnTo] = useState<OverlayKind>(null)
   const [cartRestaurantId, setCartRestaurantId] = useState<string | null>(null)
   const [addressDetail, setAddressDetail] = useState<AddressResult | null>(null)
 
   const closeOverlay = () => {
-    setActiveOverlay(null)
+    setActiveOverlay(activeOverlay === 'addresses' ? addressesReturnTo : null)
+    setAddressesReturnTo(null)
     setCartRestaurantId(null)
     setAddressDetail(null)
+  }
+
+  const openOverlay = (overlay: OverlayKind) => {
+    if (overlay === null) {
+      closeOverlay()
+      return
+    }
+    setAddressesReturnTo(overlay === 'addresses' && activeOverlay !== 'addresses' ? activeOverlay : null)
+    setActiveOverlay(overlay)
   }
 
   return (
@@ -33,7 +46,7 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
       value={{
         activeOverlay,
         cartRestaurantId,
-        openOverlay: setActiveOverlay,
+        openOverlay,
         closeOverlay,
         openCartDetail: setCartRestaurantId,
         closeCartDetail: () => setCartRestaurantId(null),

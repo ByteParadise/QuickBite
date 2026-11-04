@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { SiGoogle, SiGithub } from 'react-icons/si'
+import { SiGithub } from 'react-icons/si'
 import { FaLinkedin } from 'react-icons/fa6'
 import { useAuth0 } from '@auth0/auth0-react'
 import { clearLoginResume } from '../utils/loginResume'
@@ -33,11 +33,6 @@ export default function Login() {
         <h1 className="text-xl md:text-2xl font-semibold text-center mb-6 md:mb-8">Log in to QuickBite</h1>
 
         <div className="flex flex-col gap-4">
-          <button onClick={() => logInWith('google-oauth2')} 
-          className="w-full flex items-center justify-center gap-2 rounded-md border border-gray-300 px-5 py-3 text-base font-medium hover:bg-gray-50">
-            <SiGoogle className="w-6 h-6" />
-            Continue with Google
-          </button>
           <button onClick={() => logInWith('github')}
           className="w-full flex items-center justify-center gap-2 rounded-md border border-gray-300 px-5 py-3 text-base font-medium hover:bg-gray-50">
             <SiGithub className="w-6 h-6" />
@@ -51,7 +46,7 @@ export default function Login() {
         </div>
 
         <Link to="/" onClick={clearLoginResume} className="block text-center text-sm text-gray-500 hover:underline mt-6">
-          Back to home
+          ← Back
         </Link>
       </div>
     </div>

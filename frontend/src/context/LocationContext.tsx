@@ -34,6 +34,7 @@ interface LocationState {
 
 const LocationContext = createContext<LocationState | undefined>(undefined)
 
+// guards against a stale/corrupted shape in localStorage, not just TS types
 function isSelectedAddress(value: unknown): value is SelectedAddress {
   if (typeof value !== 'object' || value === null) return false
   const s = value as Record<string, unknown>

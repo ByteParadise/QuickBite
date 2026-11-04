@@ -16,7 +16,7 @@ export default function AddressDetail({ result, onBack, onUse }: AddressDetailPr
   return (
     <div className="p-6 pb-10">
       <button type="button" onClick={onBack} className="text-sm text-gray-500 hover:underline">
-        ← Back to results
+        ← Back
       </button>
       <h2 id="addresses-title" className="mt-2 mb-4 text-xl font-semibold">Address details</h2>
 

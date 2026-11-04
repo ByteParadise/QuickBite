@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useParams, useLocation, Link } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import { useCart, type CartRestaurant } from "../context/CartContext";
+import { useOverlay } from "../context/OverlayContext";
 import QuantityStepper from "./components/QuantityStepper";
 import MenuItemImage from "./components/MenuItemImage";
 import RestaurantMeta from "./components/RestaurantMeta";
@@ -18,6 +19,7 @@ interface RestaurantLinkState {
   address?: string | null
   lat?: number
   lng?: number
+  cameFromCart?: 'cartList' | 'cartDetail'
 }
 
 const LocationMap = lazy(() => import("./components/LocationMap"));
@@ -25,8 +27,23 @@ const LocationMap = lazy(() => import("./components/LocationMap"));
 export default function RestaurantDetail() {
   const { placeId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
+  const { openOverlay, openCartDetail } = useOverlay()
   const state = location.state as RestaurantLinkState | null
   const name = state?.name
+
+  const goBack = () => {
+    if (state?.cameFromCart === 'cartDetail' && placeId) {
+      openCartDetail(placeId)
+      openOverlay('cart')
+      navigate('/', { replace: true })
+    } else if (state?.cameFromCart === 'cartList') {
+      openOverlay('cart')
+      navigate('/', { replace: true })
+    } else {
+      navigate('/')
+    }
+  }
   const restaurant: CartRestaurant | null = placeId && name
     ? {
         placeId,
@@ -72,7 +89,7 @@ export default function RestaurantDetail() {
     <div>
       <Navbar />
       <div className="p-6">
-        <Link to="/" className="text-sm text-gray-500 hover:underline">← Back</Link>
+        <button type="button" onClick={goBack} className="text-sm text-gray-500 hover:underline">← Back</button>
         <h1 className="text-xl font-semibold mt-2">{name ?? 'Restaurant'}</h1>
         <RestaurantMeta
           lat={state?.lat ?? null}
