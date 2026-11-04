@@ -201,3 +201,26 @@ accountRouter.get('/accounts/me/cards', requireAccount, async (req, res, next) =
     next(err);
   }
 });
+
+/** Remove a Saved Card */
+accountRouter.delete('/accounts/me/cards/:id', requireAccount, async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const existing = await db.query(
+      'SELECT stripe_payment_method_id FROM cards WHERE id = $1 AND account_id = $2',
+      [id, req.account.id]
+    );
+    const card = existing.rows[0];
+    if (!card) {
+      return res.status(404).json({ error: 'card not found' });
+    }
+
+    await stripe.paymentMethods.detach(card.stripe_payment_method_id);
+    await db.query('DELETE FROM cards WHERE id = $1', [id]);
+
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});

@@ -51,3 +51,20 @@ export async function placeOrder(token: string | undefined, order: PlaceOrderReq
   if (!res.ok) throw new Error(`place order failed: ${res.status}`)
   return res.json()
 }
+
+export interface OrderSummary {
+  id: string
+  restaurantName: string
+  totalMinorUnits: number
+  currency: string
+  itemCount: number
+  createdAt: string
+}
+
+export async function fetchOrders(token: string): Promise<OrderSummary[]> {
+  const res = await fetch(`${BASE_URL}/orders/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`orders request failed: ${res.status}`)
+  return res.json()
+}

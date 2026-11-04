@@ -51,6 +51,7 @@ func withCORS(next http.Handler) http.Handler {
 
 func main() {
 	godotenv.Load()
+	middleware.InitAuth()
 	
 	var ctx context.Context = context.Background()
 	db, err := orderdb.ConnectDB(ctx)
@@ -74,6 +75,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", healthHandler)
 	mux.HandleFunc("POST /orders", middleware.OptionalAuth(api.MakeOrdersHandler(db)))
+	mux.HandleFunc("GET /orders/me", middleware.RequireAuth(api.MakeOrderHistoryHandler(db)))
+
 
 	log.Printf("order-service listening on port %s", port)
 	if err := http.ListenAndServe(":"+port, withCORS(mux)); err != nil {

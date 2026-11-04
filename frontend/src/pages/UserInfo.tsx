@@ -1,5 +1,5 @@
 import { useAuth0 } from '@auth0/auth0-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { FiChevronRight, FiCreditCard, FiLogOut, FiMapPin, FiPackage } from 'react-icons/fi'
 import type { IconType } from 'react-icons'
 import { useOverlay } from '../context/OverlayContext'
@@ -35,6 +35,7 @@ function ManageRow({ icon: Icon, label, onClick }: ManageRowProps) {
 export default function UserInfo() {
   const { isAuthenticated, isLoading, user, logout } = useAuth0()
   const { closeOverlay, openOverlay } = useOverlay()
+  const navigate = useNavigate()
 
   return (
     <div className="p-6 pb-24">
@@ -69,9 +70,9 @@ export default function UserInfo() {
       )}
 
       <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6">
-        <ManageRow icon={FiMapPin} label="Manage addresses" onClick={() => openOverlay('addresses')} />
-        <ManageRow icon={FiPackage} label="Manage orders" />
-        <ManageRow icon={FiCreditCard} label="Manage payments" />
+        <ManageRow icon={FiMapPin} label="Addresses" onClick={() => openOverlay('addresses')} />
+        <ManageRow icon={FiPackage} label="Order History" onClick={() => { closeOverlay(); navigate('/order-history') }} />
+        <ManageRow icon={FiCreditCard} label="Payment Methods" onClick={() => { closeOverlay(); navigate('/payment-methods') }} />
       </div>
 
       {isAuthenticated && (

@@ -6,7 +6,8 @@ import RestaurantDetail from './pages/RestaurantDetail'
 import type { RouteHandle } from './pages/components/FloatingNav'
 import Checkout from './pages/Checkout'
 import AddCard from './pages/AddCard'
-
+import OrderHistory from './pages/OrderHistory'
+import PaymentMethods from './pages/PaymentMethods'
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,9 @@ export const router = createBrowserRouter([
       { path: '/restaurants/:placeId', element: <RestaurantDetail />},
       { path: '/checkout/:placeId', element: <Checkout /> },
       { path: '/cards/new', element: <AddCard /> },
+      { path: '/order-history', element: <OrderHistory /> },
+      { path: '/payment-methods', element: <PaymentMethods /> },
+
     ],
   },
 ])

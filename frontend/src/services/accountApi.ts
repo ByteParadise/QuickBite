@@ -93,3 +93,12 @@ export async function recordCard(token: string, setupIntentId: string): Promise<
   if (!res.ok) throw new Error(`save card failed: ${res.status}`)
   return res.json()
 }
+
+
+export async function deleteCard(token: string, cardId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/accounts/me/cards/${cardId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`delete card failed: ${res.status}`)
+}
