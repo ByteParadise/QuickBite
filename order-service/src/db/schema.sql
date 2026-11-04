@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS order_items (
     item_id TEXT NOT NULL,
     name TEXT NOT NULL,
     quantity INTEGER NOT NULL,
+    -- price of one unit of this item, stored in minor units
+    -- e.g. 492 for $4.92 item, not 4.92
     unit_price_minor_units BIGINT NOT NULL,
+    -- unit_price_minor_units * quantity
     subtotal_minor_units BIGINT NOT NULL
 );

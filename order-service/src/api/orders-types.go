@@ -31,23 +31,6 @@ type orderRequest struct {
 	CardID          string                      `json:"cardId"`
 }
 
-// menuItem and menuResponse are no longer used by MakeOrdersHandler — checkout
-// no longer re-validates against restaurant-service's menu — but stay here
-// since fetchMenu in orders.go (kept for its Kafka/Redis wiring) still uses them.
-type menuItem struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	PriceMinorUnits int64  `json:"priceMinorUnits"`
-	Currency        string `json:"currency"`
-	Available       bool   `json:"available"`
-}
-
-type menuResponse struct {
-	RestaurantID string     `json:"restaurantId"`
-	Name         string     `json:"name"`
-	Items        []menuItem `json:"items"`
-}
-
 type orderLineItem struct {
 	ItemID              string `json:"itemId"`
 	Name                string `json:"name"`
