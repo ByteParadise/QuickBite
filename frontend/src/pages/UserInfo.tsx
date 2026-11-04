@@ -1,6 +1,6 @@
 import { useAuth0 } from '@auth0/auth0-react'
 import { Link } from 'react-router-dom'
-import { FiChevronRight, FiCreditCard, FiMapPin, FiPackage } from 'react-icons/fi'
+import { FiChevronRight, FiCreditCard, FiLogOut, FiMapPin, FiPackage } from 'react-icons/fi'
 import type { IconType } from 'react-icons'
 import { useOverlay } from '../context/OverlayContext'
 
@@ -75,14 +75,14 @@ export default function UserInfo() {
       </div>
 
       {isAuthenticated && (
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-            className="text-sm text-gray-600 hover:underline"
-          >
-            Log out
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+        >
+          <FiLogOut className="h-4 w-4" aria-hidden="true" />
+          Log out
+        </button>
       )}
     </div>
   )
