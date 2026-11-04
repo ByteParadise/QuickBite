@@ -19,6 +19,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const loginFailed = (useLocation().state as { loginFailed?: boolean } | null)?.loginFailed
+  const orderPlaced = (useLocation().state as { orderPlaced?: boolean } | null)?.orderPlaced
 
   useEffect(() => {
     if (lat === null || lng === null) return
@@ -57,6 +58,7 @@ export default function Home() {
       <Navbar />
       <div className="p-6">
         {loginFailed && <p className="mb-2 text-sm text-red-500">Login didn't complete. Please try again.</p>}
+        {orderPlaced && <p className="mb-2 text-sm text-green-600">Order placed!</p>}
         {isLoading && <p>Loading...</p>}
 
         {(locationError || error) && <p className="text-red-500">{locationError ?? error}</p>}

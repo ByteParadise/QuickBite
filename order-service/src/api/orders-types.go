@@ -1,15 +1,39 @@
 package services
 
 type orderItemRequest struct {
-	ItemID   string `json:"itemId"`
-	Quantity int    `json:"quantity"`
+	ID       int64   `json:"id"`
+	Title    string  `json:"title"`
+	Price    float64 `json:"price"`
+	Quantity int     `json:"quantity"`
+}
+
+type orderRestaurantRequest struct {
+	PlaceID string  `json:"placeId"`
+	Name    string  `json:"name"`
+	Address string  `json:"address"`
+	Lat     float64 `json:"lat"`
+	Lng     float64 `json:"lng"`
+}
+
+type orderDeliveryAddressRequest struct {
+	Line1      string  `json:"line1"`
+	City       string  `json:"city"`
+	State      string  `json:"state"`
+	PostalCode string  `json:"postalCode"`
+	Lat        float64 `json:"lat"`
+	Lng        float64 `json:"lng"`
 }
 
 type orderRequest struct {
-	RestaurantID string             `json:"restaurantId"`
-	Items        []orderItemRequest `json:"items"`
+	Restaurant      orderRestaurantRequest      `json:"restaurant"`
+	Items           []orderItemRequest          `json:"items"`
+	DeliveryAddress orderDeliveryAddressRequest `json:"deliveryAddress"`
+	CardID          string                      `json:"cardId"`
 }
 
+// menuItem and menuResponse are no longer used by MakeOrdersHandler — checkout
+// no longer re-validates against restaurant-service's menu — but stay here
+// since fetchMenu in orders.go (kept for its Kafka/Redis wiring) still uses them.
 type menuItem struct {
 	ID              string `json:"id"`
 	Name            string `json:"name"`
@@ -35,6 +59,7 @@ type orderLineItem struct {
 type orderResponse struct {
 	ID              string          `json:"id"`
 	RestaurantID    string          `json:"restaurantId"`
+	RestaurantName  string          `json:"restaurantName"`
 	Items           []orderLineItem `json:"items"`
 	TotalMinorUnits int64           `json:"totalMinorUnits"`
 	Currency        string          `json:"currency"`

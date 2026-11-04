@@ -1,20 +1,26 @@
 import { lazy, Suspense, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAuth0 } from '@auth0/auth0-react'
 import { useCart } from '../context/CartContext'
 import { useUserLocation } from '../context/LocationContext'
 import { useOverlay } from '../context/OverlayContext'
 import CardInfoSection from './components/CardInfoSection'
+import RestaurantMeta from './components/RestaurantMeta'
 import { loadSelectedCardId, saveSelectedCardId } from '../utils/selectedCard'
+import { placeOrder } from '../services/orderApi'
 
 const LocationMap = lazy(() => import('./components/LocationMap'))
 
 export default function Checkout() {
   const { placeId } = useParams()
-  const { items } = useCart()
-  const { lat, lng, address, isAddressComplete, loading, error } = useUserLocation()
+  const { items, clearRestaurant } = useCart()
+  const { lat, lng, address, addressParts, isAddressComplete, loading, error } = useUserLocation()
   const { openOverlay, openCartDetail } = useOverlay()
+  const { isAuthenticated, getAccessTokenSilently } = useAuth0()
   const navigate = useNavigate()
   const [selectedCardId, setSelectedCardId] = useState(loadSelectedCardId)
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const [orderError, setOrderError] = useState<string | null>(null)
 
   const handleSelectCard = (cardId: string) => {
     setSelectedCardId(cardId)
@@ -39,8 +45,50 @@ export default function Checkout() {
   const backToCart = () => {
     openCartDetail(orderItems[0].restaurant.placeId)
     openOverlay('cart')
-    // Leave the checkout route so closing the cart can't reveal this page again.
     navigate('/', { replace: true })
+  }
+
+  const canPlaceOrder = isAddressComplete && addressParts !== null && lat !== null && lng !== null
+
+  const handlePlaceOrder = async () => {
+    if (!canPlaceOrder || !addressParts || lat === null || lng === null) return
+
+    setIsPlacingOrder(true)
+    setOrderError(null)
+    try {
+      const token = isAuthenticated ? await getAccessTokenSilently() : undefined
+      const restaurant = orderItems[0].restaurant
+      await placeOrder(token, {
+        restaurant: {
+          placeId: restaurant.placeId,
+          name: restaurant.name,
+          address: restaurant.address,
+          lat: restaurant.lat,
+          lng: restaurant.lng,
+        },
+        items: orderItems.map((item) => ({
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        deliveryAddress: {
+          line1: addressParts.line1 ?? '',
+          city: addressParts.city ?? '',
+          state: addressParts.state ?? '',
+          postalCode: addressParts.postalCode ?? '',
+          lat,
+          lng,
+        },
+        cardId: selectedCardId,
+      })
+      clearRestaurant(restaurant.placeId)
+      navigate('/', { replace: true, state: { orderPlaced: true } })
+    } catch {
+      setOrderError('Could not place your order. Please try again.')
+    } finally {
+      setIsPlacingOrder(false)
+    }
   }
 
   return (
@@ -80,9 +128,11 @@ export default function Checkout() {
         <section className="mt-6">
           <h2 className="mb-2 text-sm font-semibold text-gray-500">Order summary</h2>
           <p className="font-medium">{orderItems[0].restaurant.name}</p>
-          {orderItems[0].restaurant.address && (
-            <p className="text-sm text-gray-500">{orderItems[0].restaurant.address}</p>
-          )}
+          <RestaurantMeta
+            lat={orderItems[0].restaurant.lat}
+            lng={orderItems[0].restaurant.lng}
+            address={orderItems[0].restaurant.address}
+          />
           <ul className="mt-2 flex flex-col gap-2">
             {orderItems.map((item) => (
               <li key={item.id} className="flex justify-between gap-4 text-sm">
@@ -102,13 +152,15 @@ export default function Checkout() {
           <span>${subtotal.toFixed(2)}</span>
         </div>
 
-        {/* Enable once order-service accepts these orders. */}
+        {orderError && <p className="mt-2 text-sm text-red-500">{orderError}</p>}
+
         <button
           type="button"
-          disabled
+          onClick={handlePlaceOrder}
+          disabled={!canPlaceOrder || isPlacingOrder}
           className="mt-3 w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Place Order
+          {isPlacingOrder ? 'Placing order...' : 'Place Order'}
         </button>
       </div>
     </div>

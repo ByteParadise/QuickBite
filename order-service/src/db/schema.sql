@@ -1,8 +1,17 @@
 CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY,
     restaurant_id TEXT NOT NULL,
+    restaurant_name TEXT NOT NULL,
     total_minor_units BIGINT NOT NULL,
     currency TEXT NOT NULL,
+    account_sub TEXT,
+    card_id TEXT NOT NULL,
+    line1 TEXT NOT NULL,
+    city TEXT NOT NULL,
+    state TEXT NOT NULL,
+    postal_code TEXT NOT NULL,
+    lat DOUBLE PRECISION NOT NULL,
+    lng DOUBLE PRECISION NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

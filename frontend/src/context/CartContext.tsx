@@ -22,6 +22,7 @@ interface CartState {
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'quantity'>) => void
   removeItem: (placeId: string, id: number) => void
+  clearRestaurant: (placeId: string) => void
 }
 
 const CartContext = createContext<CartState | undefined>(undefined)
@@ -98,8 +99,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const clearRestaurant = (placeId: string) => {
+    setItems((prev) => prev.filter((i) => i.restaurant.placeId !== placeId))
+  }
+
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem }}>{children}</CartContext.Provider>
+    <CartContext.Provider value={{ items, addItem, removeItem, clearRestaurant }}>{children}</CartContext.Provider>
   )
 }
 
