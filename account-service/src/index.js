@@ -3,6 +3,7 @@ import { accountRouter } from './api/accounts.js';
 import { ensureSchema } from './db/schema.js';
 import cors from 'cors';
 
+
 const PORT = process.env.PORT ?? 4003;
 
 const app = express();
