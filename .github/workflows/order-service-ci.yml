@@ -6,7 +6,7 @@ on:
     paths:
       - 'order-service/**'
   push:
-    branches: [main]
+    branches: [main, 'sprint*/main']
     paths:
       - 'order-service/**'
 
