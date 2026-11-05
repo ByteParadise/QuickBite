@@ -20,7 +20,6 @@ export const router = createBrowserRouter([
       { path: '/cards/new', element: <AddCard /> },
       { path: '/order-history', element: <OrderHistory /> },
       { path: '/payment-methods', element: <PaymentMethods /> },
-
     ],
   },
 ])

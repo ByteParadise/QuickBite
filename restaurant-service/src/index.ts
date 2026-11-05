@@ -3,7 +3,6 @@ import cors from 'cors'
 import { restaurantRouter } from './api/restaurants.js';
 import { redis } from './db/redis.js';
 import { ensureSchema } from './db/schema.js';
-import { connectProducer } from './api/kafka.js';
 
 const PORT = process.env.PORT ?? 4001;
 
@@ -26,7 +25,6 @@ app.use(errorHandler);
 async function main() {
   await ensureSchema();
   await redis.connect();
-  await connectProducer();
   app.listen(PORT, () => {
     console.log(`restaurant-service listening on port ${PORT}`);
   });

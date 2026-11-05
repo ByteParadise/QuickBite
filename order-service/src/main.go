@@ -64,9 +64,6 @@ func main() {
 		log.Fatalf("failed to ensure schema: %v", err)
 	}
 
-	go api.ConsumeAddressSaved(ctx, db)
-	go api.ConsumeMenuUpdated(ctx, db)
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "4002"
