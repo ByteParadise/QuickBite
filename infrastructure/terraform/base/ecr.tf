@@ -1,4 +1,7 @@
-# ? ecr repo
+# ? ECR (Elastic Container Registry)
+# AWS's managed Docker/OCI container image registry
+
+# ? ECR repo
 # An ecr repo is a container image repository
 # GitHub repo (ByteParadise/QuickBite) — holds source code
 #  │  CI builds a Docker image from that source
