@@ -44,7 +44,10 @@ data "aws_iam_policy_document" "github_actions_trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = [for repo in var.github_repos : "repo:${var.github_org}/${repo}:*"]
+        values = concat(
+          [for repo in var.github_repos : "repo:${var.github_org}/${repo}:*"],
+          [for repo in var.github_repos : "repo:${var.github_org}@*/${repo}@*:*"]
+        )
     }
   }
 }
@@ -71,10 +74,20 @@ data "aws_iam_policy_document" "ecr_push" {
   statement {
     effect = "Allow"
     actions = [
+      # checks which layers already exist in the repo, so only new leyers get uploaded
       "ecr:BatchCheckLayerAvailability",
+      # fetches a URL to read an existing layer's content, used when Docker needs to
+      # reference/verify a layer that's already in the registry
+      "ecr:GetDownloadUrlForLayer",
+      # fetches existing image manifests (the JSON describeing an image's layers + config)
+      "ecr:BatchGetImage",
+      # publishes the final manifest itself once its layers are all uploaded
       "ecr:PutImage",
+      # starts a new layer upload session
       "ecr:InitiateLayerUpload",
+      # uploads one chunck of a layer's data within that session
       "ecr:UploadLayerPart",
+      # finalizes the uplaod once all parts are sent, making that layer actually available in the repo
       "ecr:CompleteLayerUpload",
     ]
     resources = [for repo in aws_ecr_repository.service : repo.arn]
