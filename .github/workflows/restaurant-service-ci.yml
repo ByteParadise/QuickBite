@@ -6,10 +6,12 @@ on:
   pull_request:
     paths:
       - 'restaurant-service/**'
+      - '.github/workflows/restaurant-service-ci.yml'
   push:
     branches: [main, 'sprint*/main']
     paths:
       - 'restaurant-service/**'
+      - '.github/workflows/restaurant-service-ci.yml'
 
 jobs:
   check:

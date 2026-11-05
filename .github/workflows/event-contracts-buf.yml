@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - 'event-contracts/**'
+      - '.github/workflows/event-contracts-buf.yml'
   push:
     branches: [main, 'sprint*/main']
     paths:
       - 'event-contracts/**'
+      - '.github/workflows/event-contracts-buf.yml'
 
 jobs:
   buf:

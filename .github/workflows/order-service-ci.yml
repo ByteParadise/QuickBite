@@ -5,10 +5,12 @@ on:
   pull_request:
     paths:
       - 'order-service/**'
+      - '.github/workflows/order-service-ci.yml'
   push:
     branches: [main, 'sprint*/main']
     paths:
       - 'order-service/**'
+      - '.github/workflows/order-service-ci.yml'
 
 jobs:
   build:
