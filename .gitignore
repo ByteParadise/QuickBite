@@ -1,4 +1,4 @@
-CLAUDE.md
+CLAUDE.*
 .claude/
 notes/*
 TEST.sprint1.md
@@ -17,3 +17,9 @@ Thumbs.db
 # Env files (root-level; services also gitignore their own)
 .env
 .env.*
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log

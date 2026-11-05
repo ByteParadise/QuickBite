@@ -6,9 +6,17 @@ on:
     paths:
       - 'account-service/**'
   push:
-    branches: [main]
+    branches: [main, 'sprint*/main']
     paths:
       - 'account-service/**'
+
+    
+
+permissions:
+  contents: read
+  # required for github actions to even request an OIDC token at all.
+  # without it, configure-aws-credentials has nothing to exchange with AWS
+  id-token: write
 
 jobs:
   check:
@@ -30,3 +38,31 @@ jobs:
           BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
       - name: Syntax check
         run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
+
+  build-and-push:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: account-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Log in to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t "$REGISTRY/quickbite/account-service:$IMAGE_TAG" .
+          docker push "$REGISTRY/quickbite/account-service:$IMAGE_TAG"
