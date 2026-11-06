@@ -46,10 +46,10 @@ jobs:
       - name: Syntax check
         run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
 
-  # after merge
+  # after merge, or a manual re-run (e.g. retrying a failed deploy without a new commit)
   build-and-push:
     needs: check
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
