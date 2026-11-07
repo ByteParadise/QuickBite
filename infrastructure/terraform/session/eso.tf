@@ -67,7 +67,7 @@ resource "helm_release" "external_secrets" {
 # doing that validation.
 resource "kubectl_manifest" "cluster_secret_store" {
   yaml_body = yamlencode({
-    apiVersion = "external-secrets.io/v1beta1"
+    apiVersion = "external-secrets.io/v1"
     kind       = "ClusterSecretStore"
     metadata   = { name = "aws-secrets-manager" }
     spec = {
