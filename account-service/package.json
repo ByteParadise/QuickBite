@@ -11,6 +11,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@aws-sdk/rds-signer": "^3.1164.0",
     "@bufbuild/protobuf": "^2.16.0",
     "cors": "^2.8.6",
     "express": "^5.0.0",

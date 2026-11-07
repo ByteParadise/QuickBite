@@ -27,7 +27,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Run as a non-root user rather than the image's default root
-RUN addgroup -S app && adduser -S app -G app
+RUN addgroup -S app && adduser -S -u 1001 -G app app
 
 # pulls only the installed dependencies from the deps stage
 # none of npm's cache or install-time files come along

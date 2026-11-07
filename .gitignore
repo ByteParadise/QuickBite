@@ -1,5 +1,6 @@
 CLAUDE.*
 .claude/
+*.comment.md
 docs/*
 TEST.sprint1.md
 
