@@ -53,18 +53,16 @@ resource "aws_eks_pod_identity_association" "account_service" {
   depends_on = [aws_eks_addon.pod_identity]
 }
 
-# --- External Secrets Operator: needs to read the 4 secret containers ---
-# sama shape, for External Secrets Operator: a roel scoped to read-only
-# access on exactly the four secret containers from `secrets.tf`, nothing
-# broader.
+# --- External Secrets Operator: needs to read the one secret container ---
+# scoped to read-only access on secret from `secrets.tf`
+data "aws_secretsmanager_secret" "stripe_secret_key" {
+  name = "quickbite/account-service/STRIPE_SECRET_KEY"
+}
 data "aws_iam_policy_document" "eso_secrets_access" {
   statement {
     actions = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
     resources = [
-      aws_secretsmanager_secret.auth0_domain.arn,
-      aws_secretsmanager_secret.auth0_audience.arn,
-      aws_secretsmanager_secret.stripe_secret_key.arn,
-      aws_secretsmanager_secret.cors_origins.arn,
+      data.aws_secretsmanager_secret.stripe_secret_key.arn,
     ]
   }
 }

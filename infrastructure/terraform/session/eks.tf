@@ -18,6 +18,14 @@ resource "aws_eks_cluster" "main" {
     endpoint_private_access = true
   }
 
+  # API mode is required for aws_eks_access_entry/aws_eks_access_policy_association
+  # below; bootstrap_cluster_creator_admin_permissions auto-grants the identity
+  # running this apply cluster-admin, which is what makes helm/kubectl work at all
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
+
   # forces cluster-policy attachment and the ubnet tagging to finish first
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_policy,
@@ -55,17 +63,25 @@ resource "aws_eks_node_group" "main" {
 
 # Grants the identity running `terraform apply` (you, via the "terraform"
 # profile) kubectl access to the cluster it's creating.
-resource "aws_eks_access_entry" "admin" {
-  cluster_name  = aws_eks_cluster.main.name
-  principal_arn = data.aws_caller_identity.current.arn
-}
 
-resource "aws_eks_access_policy_association" "admin" {
-  cluster_name  = aws_eks_cluster.main.name
-  principal_arn = data.aws_caller_identity.current.arn
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+# ! Commented out — redundant with access_config's
+# bootstrap_cluster_creator_admin_permissions = true above, which already
+# makes AWS auto-create an equivalent access entry + AmazonEKSClusterAdminPolicy
+# association for the cluster creator on its own. Creating these explicitly
+# as well caused:
+#   Error: ResourceInUseException: The specified access entry resource
+#   is already in use on this cluster.
+# resource "aws_eks_access_entry" "admin" {
+#   cluster_name  = aws_eks_cluster.main.name
+#   principal_arn = data.aws_caller_identity.current.arn
+# }
 
-  access_scope {
-    type = "cluster"
-  }
-}
+# resource "aws_eks_access_policy_association" "admin" {
+#   cluster_name  = aws_eks_cluster.main.name
+#   principal_arn = data.aws_caller_identity.current.arn
+#   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+#   access_scope {
+#     type = "cluster"
+#   }
+# }

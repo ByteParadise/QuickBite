@@ -110,11 +110,12 @@ resource "aws_iam_role_policy" "rds_proxy_secret_access" {
 
 # the Proxy itself
 resource "aws_db_proxy" "account_service" {
-  name                   = "quickbite-account-service"
-  engine_family          = "POSTGRESQL"
+  name                    = "quickbite-account-service"
+  engine_family           = "POSTGRESQL"
   role_arn                = aws_iam_role.rds_proxy.arn
-  vpc_subnet_ids           = data.aws_subnets.private.ids
+  vpc_subnet_ids          = data.aws_subnets.private.ids
   vpc_security_group_ids  = [aws_security_group.rds_proxy_account_service.id]
+  require_tls             = true
 
   auth {
     auth_scheme = "SECRETS"
