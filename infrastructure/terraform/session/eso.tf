@@ -42,6 +42,7 @@ resource "helm_release" "external_secrets" {
   version          = "2.14.0"
   namespace        = "external-secrets"
   create_namespace = true
+  timeout          = 600 # default 300s isn't enough for this chart's uninstall
 
   # pinned explicitly, not left to the chart's auto-generated fullname —
   # must exactly match pod-identity.tf's association, same fragility as
