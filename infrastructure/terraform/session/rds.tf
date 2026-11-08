@@ -141,11 +141,14 @@ resource "aws_db_proxy_target" "account_service" {
 # Permission to connect to the proxy via an IAM token, scoped to this
 # specific proxy + db username. Attached to account-service's Pod Identity
 # role in the next step, not here.
+locals {
+  rds_proxy_resource_id = element(split(":", aws_db_proxy.account_service.arn), 6)
+}
 data "aws_iam_policy_document" "rds_connect" {
   statement {
     actions = ["rds-db:connect"]
     resources = [
-      "arn:aws:rds-db:${var.aws_region}:${data.aws_caller_identity.current.account_id}:dbuser:${aws_db_proxy.account_service.id}/${aws_db_instance.account_service.username}"
+      "arn:aws:rds-db:${var.aws_region}:${data.aws_caller_identity.current.account_id}:dbuser:${local.rds_proxy_resource_id}/${aws_db_instance.account_service.username}"
     ]
   }
 }
