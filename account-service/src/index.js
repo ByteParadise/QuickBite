@@ -16,7 +16,7 @@ app.use(cors({ origin: (process.env.CORS_ORIGINS ?? 'http://localhost:5173').spl
 app.use(accountRouter);
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', version: 'v2' });
 });
 
 app.use((err, req, res, next) => {
