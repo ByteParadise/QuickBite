@@ -53,7 +53,16 @@ resource "helm_release" "external_secrets" {
 
   # ensures the node group (somewhere to actually run the pod) and the Pod
   # Identity association both exist first.
-  depends_on = [aws_eks_node_group.main, aws_eks_pod_identity_association.eso]
+    depends_on = [
+    aws_eks_node_group.main,
+    aws_eks_pod_identity_association.eso,
+    # exist to force destory order: without this, Terraform sees no link between this rosource
+    # and the access policy association, so it may destory both in parallel — revoking cluster-
+    # admin access while this resource's own unintall is still running. This makes Terraform
+    # destroy this resource first, before access is revoked.
+    aws_eks_access_policy_association.admin,
+  ]
+
 }
 
 # creates a `ClusterSecretStore`, a custom resource ESO itself defines, telling
@@ -80,5 +89,8 @@ resource "kubectl_manifest" "cluster_secret_store" {
     }
   })
 
-  depends_on = [helm_release.external_secrets]
+    depends_on = [
+      helm_release.external_secrets, 
+      aws_eks_access_policy_association.admin
+    ]
 }
