@@ -13,6 +13,7 @@ resource "helm_release" "argocd" {
   version          = "10.15.0"
   namespace        = "argocd"
   create_namespace = true
+  timeout          = 600
 
     # trimmed to fit this cluster's small single-node pod-count limit
   # (not a resource-sizing issue — t3.small simply allows a limited
