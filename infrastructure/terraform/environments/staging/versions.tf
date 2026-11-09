@@ -1,4 +1,3 @@
-
 # ? helm
 # Helm is Kubernetes' package manager — the same role `npm/apt/brew` play
 # for their ecosystems, but for Kubernetes manifests.
@@ -47,7 +46,7 @@ provider "aws" {
     tags = {
       Project     = "QuickBite"
       ManagedBy   = "terraform"
-      Environment = "session"
+      Environment = "staging"
     }
   }
 }

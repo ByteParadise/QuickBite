@@ -1,7 +1,11 @@
-# ? argocd.tf
+# ? argocd/main.tf
 # installs Argo CD itself into the cluster, then bootstraps the one piece that
 # lets everything after this be driven entirely by Git — no more Terraform
-# changes needed when when more services are added
+# changes needed when more services are added
+#
+# the helm/kubectl provider connections themselves live in the calling
+# root module (environments/staging/providers.tf) — see modules/eso/main.tf's
+# header comment for why.
 
 # installs Argo CD into the cluster via Helm.
 # Argo CD only talks to the in-cluster Kubernetes API and a public Git
@@ -10,7 +14,7 @@ resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-cd"
-  version          = "10.15.0"
+  version          = var.chart_version
   namespace        = "argocd"
   create_namespace = true
   timeout          = 600
@@ -33,13 +37,6 @@ resource "helm_release" "argocd" {
     name  = "applicationSet.enabled"
     value = "false"
   }
-
-  # same destroy-order lesson as eso.tf's helm_release — forces this to
-  # be destroyed before admin's cluster access is revoked
-  depends_on = [
-    aws_eks_node_group.main,
-    aws_eks_access_policy_association.admin,
-  ]
 }
 
 # bootstraps the one Application Argo CD needs created outside Git: it
@@ -55,9 +52,9 @@ resource "kubectl_manifest" "argocd_bootstrap_app" {
     spec = {
       project = "default"
       source = {
-        repoURL        = "https://github.com/ByteParadise/QuickBite-gitops.git"
-        targetRevision = "main"
-        path           = "argocd-apps"
+        repoURL        = var.gitops_repo_url
+        targetRevision = var.gitops_target_revision
+        path           = var.gitops_path
         directory      = { recurse = true }
       }
       destination = {
