@@ -14,8 +14,9 @@ on:
 
 permissions:
   contents: read
-  # required for github actions to even request an OIDC token at all.
-  # without it, configure-aws-credentials has nothing to exchange with AWS
+  # The GitHub runner gives this job a one-time request URL and token
+  # in the ACACTIONS_ID_TOKEN_REQUEST_URL and ACTIONS_ID_TOKEN_REQUEST_TOKEN
+  # environment variables 
   id-token: write
 
 jobs:
@@ -60,6 +61,7 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          # This is pre-set on as a variable on GitHub after applying `base`
           role-to-assume: ${{ vars.AWS_GITHUB_ACTIONS_ROLE_ARN }}
           aws-region: us-east-1
 
@@ -96,7 +98,7 @@ jobs:
           GITOPS_TOKEN: ${{ steps.gitops-token.outputs.token }}
         run: |
           git clone "https://x-access-token:${GITOPS_TOKEN}@github.com/ByteParadise/QuickBite-gitops.git" gitops-repo
-          cd gitops-repo/apps/account-service/overlays/session
+          cd gitops-repo/apps/account-service/overlays/staging
 
           kustomize edit set image \
             555044956548.dkr.ecr.us-east-1.amazonaws.com/quickbite/account-service="555044956548.dkr.ecr.us-east-1.amazonaws.com/quickbite/account-service:${IMAGE_TAG}"

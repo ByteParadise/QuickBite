@@ -4,31 +4,29 @@ data "tls_certificate" "github" {
   url = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
 }
 
-# register github as a trusted identity provider in AWS acconunt
+# Register github as a trusted identity provider in AWS acconunt
 resource "aws_iam_openid_connect_provider" "github" {
-  # github OIDC issuer (where the tokens come from)
+  # Identity Provider (IdP)
   url             = "https://token.actions.githubusercontent.com"
-  # who's allowed to be the audience of these tokens
-  # Tokens only for AWS's STS (Security Token Serivce) is accpeted
+  # Relying Party
   client_id_list  = ["sts.amazonaws.com"]
   # the certificate fingerprint from the data block above,
-  # so AWS can verify github's token-signing cert is legitimate
+  # so AWS can verify github's token signature is valid
   thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
 }
 
-# * policy and role are together
-# this is the trust policy: who is allowed to assume below IAM role
+# trust policy
 data "aws_iam_policy_document" "github_actions_trust" {
   statement {
-    effect  = "Allow"
     # the specific permission being granted: swap a web identity
     # token (github's) for temporary AWS credentials
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
     # says the OIDC provider from above is who is being trusted
     principals {
+      # Federated: external identity provider
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [aws_iam_openid_connecft_provider.github.arn]
     }
 
     # The token's audience must be sts.amazonaws.com, confirming
@@ -52,7 +50,7 @@ data "aws_iam_policy_document" "github_actions_trust" {
   }
 }
 
-# create the actual role, using above trust policy as its assume_role_policy
+# IAM role
 resource "aws_iam_role" "github_actions_ci" {
   name               = "quickbite-gh-ci-ecr-push"
   # this is the role CI will assume at runtime
@@ -100,3 +98,5 @@ resource "aws_iam_role_policy" "ecr_push" {
   role   = aws_iam_role.github_actions_ci.id
   policy = data.aws_iam_policy_document.ecr_push.json
 }
+
+
