@@ -25,7 +25,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
-# trust policy allowing EC2 to assume
+# trust policy allowing node to assume
 data "aws_iam_policy_document" "eks_node_assume" {
   statement {
     actions = ["sts:AssumeRole"]

@@ -1,38 +1,57 @@
 name: account-service
 
 on:
+  # workflow_dispatch lets you start the workflow by hand instead
+  # of waiting for a push or PR. There are several options:
+  # 1. GitHub UI
+  # 2. From the CLI
+  # 3. Through REST API
+  # `paths` filters don't apply to this manual run, thus, this runs even if nothing
+  # in the specified paths changed.
   workflow_dispatch:
+  # Runs only when PR is opened or updated.
   pull_request:
     paths:
       - 'account-service/**'
       - '.github/workflows/account-service-ci.yml'
+  # Runs only when merged or pushed on these branches
   push:
     branches: [main, 'sprint*/main']
     paths:
       - 'account-service/**'
       - '.github/workflows/account-service-ci.yml'
 
+# Set permissions for what this workflow can do.
+# Once you add a `permissions:` block, every scope you don't list becomes `none`.
+# Thus, if you have to ensure to add default permissions like `contents`.
 permissions:
+  # Lets the job's automatic `GITHUB_TOKEN` read the repo's code.
+  # `actions/checkout` uses that token to clone the repo. 
+  # Without it, checkout fails on a private repo.
   contents: read
-  # required for github actions to even request an OIDC token at all.
-  # without it, configure-aws-credentials has nothing to exchange with AWS
+  # Allows the job to request an OIDC token (the JWT) from GitHub.
+  # Without it, GitHub doesn't provide ACTIONS_ID_TOKEN_REQUEST_URL and ACTIONS_ID_TOKEN_REQUEST_TOKEN.
+  # Then, `configure-aws-credentials` has no JWT to exchange with AWS.
   id-token: write
 
+# Specifies what workflow job does
 jobs:
-  # ? job names are not predefined 
-  # checks on merge
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Set workflow environment
+    # The root directory is relative to where .github is located
+    # Set default working-directory
     defaults:
       run:
         working-directory: account-service
     steps:
+      # checkout reads the code onto the workflow environment
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Install dependencies
+        # ci stands for clean install. 
         run: npm ci
       - uses: bufbuild/buf-setup-action@v1
         with:
@@ -46,40 +65,82 @@ jobs:
       - name: Syntax check
         run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
 
-  # after merge, or a manual re-run (e.g. retrying a failed deploy without a new commit)
   build-and-push:
-    needs: check
+    needs: check # Requires check job to pass.
+    # build-and-push only runs on push/merge or manual run by workflow_dispatch.
+    # Thus, PR doesn't run this job and re-try on job failure is possible.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
     runs-on: ubuntu-latest
+    # Set default working-directory
     defaults:
       run:
         working-directory: account-service
     steps:
       - uses: actions/checkout@v4
 
+      # 1. Gets a JWT from GitHub. It reads ACTIONS_ID_TOKEN_REQUEST_URL
+      # and ACTIONS_ID_TOKEN_REQUEST_TOKEN (available because of id-token: write) 
+      # and asks for a token with aud = sts.amazonaws.com.
+      # 2. Calls AWS STS `AssumeRoleWithWebIdentity`, passing that JWT and your
+      # role-to-assume ARN.
+      # 3. Receives temporary credentials
+      # 4. Exports them as environment variables for the rest of the job:
+      # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN and 
+      # AWS_REGION (from aws-region: us-east-1). It also masks them in the logs.
+      # 5. Later steps pick them up automatically. amazon-ecr-loing, the
+      # AWS CLI and the SDKs all read those environment variables.
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          # This is manually pre-set on as a variable on GitHub after 
+          # Terraform applies `base`
           role-to-assume: ${{ vars.AWS_GITHUB_ACTIONS_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Log in to ECR
-        id: login-ecr
+        id: login-ecr # gives this step a name to refer to
         uses: aws-actions/amazon-ecr-login@v2
       
-      - name: Build and push image
+      # Build and set IMAGE env containing the image registry and the repo
+      - name: Resolve image name
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        # build and push image tagged with above env values
-        run: |
-          docker build -t "$REGISTRY/quickbite/account-service:$IMAGE_TAG" .
-          docker push "$REGISTRY/quickbite/account-service:$IMAGE_TAG"
+        run: echo "IMAGE=${REGISTRY}/quickbite/account-service" >> "$GITHUB_ENV"
 
-      # install standalone kustomize CLI
-      # needed because `kustomize edit set image` is a CLI subcommand that doesn't exist via `kubectl kustomize`
+      - name: Build and push image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        # Build the image in the workflow environment with REGISTRY and IMAGE_TAG
+        # - REGISTRY denotes the registry address where the image is pushed to
+        # - IMAGE_TAG denotes github.sha so each built image is treated unique
+        # `docker push` knows where to send it from the image name itself.
+        # Docker splits that name into three parts:
+        # - Registry host: REGISTRY
+        # - Repository: `quickbite/account-service`, the ECR repo created in ecr.tf
+        # - Tag: <commit-sha>
+        run: |
+          docker build -t "$IMAGE:$IMAGE_TAG" .
+          docker push "$IMAGE:$IMAGE_TAG"
+
+      # Install standalone kustomize CLI.
+      # Needed because `kustomize edit set image` is a CLI subcommand 
+      # that doesn't exist via `kubectl kustomize`
       - uses: imranismail/setup-kustomize@v2
 
+      # GitHub App Token
+      # 1. App Setup
+      # - You created a GitHub App and installed it on the ByteParadise org with access to
+      # QuickBite-gitops. It can only read & write to push.
+      # - Those App's ID and private key are pre-set on secrets
+      # 2. The action signs a JWT with the App's private key. This is proves to GitHub "I am
+      # this App." It's the same signature idea as OIDC, but here you hold the private key
+      # and GitHub verifies it with the public key.
+      # 3. It looks up the App's installation on owner.
+      # 4. It asks GitHub for an installation access token limited to repositories
+      # 5. GitHub returns the token, and the actions exposes it as `steps.gitops-token.outputs.token`
+      # 6. The next step uses it to authenticate the clone and later git push.
+      # 7. Cleanup: by default, the action revokes the token when the job ends.
       - name: Generate GitOps commit token
         id: gitops-token
         uses: actions/create-github-app-token@v1
@@ -89,6 +150,11 @@ jobs:
           owner: ByteParadise
           repositories: QuickBite-gitops
 
+      # Tells the GitOps repo that staging should now run the image that was just pushed.
+      # 1. Clone the GitOps repo
+      # 2. Update the account-service label to use that newly built image
+      # 3. Commits and pushes the change
+      # 4. Your GitOps controller (Argo CD) watches this change and apply them
       - name: Update image tag in QuickBite-gitops
         working-directory: .
         env:
@@ -96,10 +162,9 @@ jobs:
           GITOPS_TOKEN: ${{ steps.gitops-token.outputs.token }}
         run: |
           git clone "https://x-access-token:${GITOPS_TOKEN}@github.com/ByteParadise/QuickBite-gitops.git" gitops-repo
-          cd gitops-repo/apps/account-service/overlays/session
+          cd gitops-repo/apps/account-service/overlays/staging
 
-          kustomize edit set image \
-            555044956548.dkr.ecr.us-east-1.amazonaws.com/quickbite/account-service="555044956548.dkr.ecr.us-east-1.amazonaws.com/quickbite/account-service:${IMAGE_TAG}"
+          kustomize edit set image "account-service=${IMAGE}:${IMAGE_TAG}"
 
           git config user.name "quickbite-gitops-bot[bot]"
           git config user.email "quickbite-gitops-bot[bot]@users.noreply.github.com"
