@@ -1,4 +1,9 @@
-# fetches github's TLS certificate for its OIDC (OpenID Conenct)
+# ? iam-oidc
+# Register GitHub as a trusted identity provider for OIDC authentication
+# so that GitHub Actions CI workflow can authenticate to AWS and manipulate
+# service images on ECR
+
+# Fetches github's TLS certificate for its OIDC (OpenID Conenct)
 # token endpoint, so Terraform can read its fingerprint.
 data "tls_certificate" "github" {
   url = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
@@ -8,37 +13,37 @@ data "tls_certificate" "github" {
 resource "aws_iam_openid_connect_provider" "github" {
   # Identity Provider (IdP)
   url             = "https://token.actions.githubusercontent.com"
-  # Relying Party
+  # Relying Party (AWS Security Token Service)
   client_id_list  = ["sts.amazonaws.com"]
-  # the certificate fingerprint from the data block above,
+  # The certificate fingerprint from the data block above,
   # so AWS can verify github's token signature is valid
   thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
 }
 
-# trust policy
+# Trust policy
 data "aws_iam_policy_document" "github_actions_trust" {
   statement {
-    # the specific permission being granted: swap a web identity
-    # token (github's) for temporary AWS credentials
+    # Specifies how the caller proves who they are.
+    # CI reaches out to this endpoint with its JWT token to be validated by STS service.
+    # You specify this IAM role ARN in GitHub CI workflow.
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
-    # says the OIDC provider from above is who is being trusted
+    # Specifies who is even allowed to try.
     principals {
       # Federated: external identity provider
       type        = "Federated"
+      # Register GitHub
       identifiers = [aws_iam_openid_connecft_provider.github.arn]
     }
 
-    # The token's audience must be sts.amazonaws.com, confirming
-    # it's really meant from AWS
+    # When AWS receives JWT token, it performs additional checks for validation.
+    # Checks token's audience is sts.amazonaws.com.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
       values   = ["sts.amazonaws.com"]
     }
 
-    # The token's subject must match repo:ByteParadise/QuickBite:*.
-    # This is what actually restricts which github repo can assume this role.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
@@ -51,48 +56,49 @@ data "aws_iam_policy_document" "github_actions_trust" {
 }
 
 # IAM role
+# Once IAM role is created, you specify its ARN in GitHub workflow
+# as an env variable so that it knows which role to request
 resource "aws_iam_role" "github_actions_ci" {
   name               = "quickbite-gh-ci-ecr-push"
-  # this is the role CI will assume at runtime
   assume_role_policy = data.aws_iam_policy_document.github_actions_trust.json
 }
 
-# this is the permissions policy (separate from the trust policy above)
-# what the role can actually do once assumed
+# Permissions policy
 data "aws_iam_policy_document" "ecr_push" {
-  # needed to log in to ECR at all
+  # Needed to log in to ECR at all
   statement {
     effect    = "Allow"
     actions   = ["ecr:GetAuthorizationToken"]
-    # since it's account-level, not tied to one repo
+    # Since it's account-level, not tied to one repo
     resources = ["*"]
   }
 
-  # the actual push permissions, scoped to only ECR repos created here
+  # The actual push permissions, scoped to only ECR repos created here
   statement {
     effect = "Allow"
     actions = [
-      # checks which layers already exist in the repo, so only new leyers get uploaded
-      "ecr:BatchCheckLayerAvailability",
-      # fetches a URL to read an existing layer's content, used when Docker needs to
+      # Fetches a URL to read an existing layer's content, used when Docker needs to
       # reference/verify a layer that's already in the registry
       "ecr:GetDownloadUrlForLayer",
-      # fetches existing image manifests (the JSON describeing an image's layers + config)
+      # Fetches existing image manifests (the JSON describeing an image's layers + config)
       "ecr:BatchGetImage",
-      # publishes the final manifest itself once its layers are all uploaded
+      # Checks which layers already exist in the repo, so only new leyers get uploaded
+      "ecr:BatchCheckLayerAvailability",
+      # Publishes the final manifest itself once its layers are all uploaded
       "ecr:PutImage",
-      # starts a new layer upload session
+      # Starts a new layer upload session
       "ecr:InitiateLayerUpload",
-      # uploads one chunck of a layer's data within that session
+      # Pploads one chunck of a layer's data within that session
       "ecr:UploadLayerPart",
-      # finalizes the uplaod once all parts are sent, making that layer actually available in the repo
+      # Finalizes the uplaod once all parts are sent, making that layer actually available in the repo
       "ecr:CompleteLayerUpload",
     ]
+    # Scoped only to the services specified in ecr.tf
     resources = [for repo in aws_ecr_repository.service : repo.arn]
   }
 }
 
-# attaches that permissions document directly to the role
+# Attaches the permissions document directly to the role
 resource "aws_iam_role_policy" "ecr_push" {
   name   = "quickbite-gh-ci-ecr-push-policy"
   role   = aws_iam_role.github_actions_ci.id
