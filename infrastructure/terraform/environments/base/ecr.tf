@@ -3,10 +3,11 @@
 
 # ? ECR repository
 # An ECR repository is a container image repository.
-# GitHub repo (ByteParadise/QuickBite) — holds source code
+#
+# GitHub repo (ByteParadise/QuickBite) holds source code
 #  │  CI builds a Docker image from the source
 #  ▼
-# ECR repository (quickbite/account-service) — holds the built image
+# ECR repository (e.g. quickbite/account-service) holds the built image
 #  │  EKS pulls the image to actually run it  
 #  ▼
 # A running pod on the cluster
@@ -32,15 +33,15 @@ resource "aws_ecr_repository" "service" {
   }
 }
 
-# 
+# Sets up automatic cleanup rules for each ECR repository
 resource "aws_ecr_lifecycle_policy" "service" {
-  # one lifecycle policy per repository
+  # Create one lifecycle policy per repository
   for_each   = aws_ecr_repository.service
-  # points the policy at that specific repo
+  # Attaches the policy to each repo
   repository = each.value.name
 
-  # Expire (delete) any image that is untagged and has sat there for 7+ days.
-  # Untagged images accumulate from normal CI activity
+  # * Consider adding more rules here so that we don't blow up the registry with redundant images
+  # Expire (delete) any untagged images and has sat there for 7+ days.
   policy = jsonencode({
     rules = [{
       rulePriority = 1

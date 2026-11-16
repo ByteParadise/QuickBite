@@ -1,3 +1,10 @@
+# ? variables.tf
+# Here the variables here provides fields which you can manually
+# configure depending on which environment you are using these
+# modules within. By configuring these variables, the actual
+# resource that is being built here, which is eks/main.tf will
+# adopt the changes and launched based on the set variables.
+
 variable "environment" {
   description = "short name used in resource/tag naming (e.g. \"staging\", \"production\")"
   type        = string
@@ -7,12 +14,8 @@ variable "cluster_name" {
   type = string
 }
 
-# Verified against AWS's EKS version lifecycle page (2026-11-06): 1.34-1.37
-# are in standard support, 1.31-1.33 are paid extended support (6x the
-# control plane rate). 1.37 is newest, longest runway before this matters again.
 variable "kubernetes_version" {
   type    = string
-  default = "1.37"
 }
 
 variable "node_instance_type" {
@@ -21,17 +24,14 @@ variable "node_instance_type" {
 
 variable "node_desired_size" {
   type    = number
-  default = 2
 }
 
 variable "node_min_size" {
   type    = number
-  default = 1
 }
 
 variable "node_max_size" {
   type    = number
-  default = 2
 }
 
 variable "public_subnet_ids" {

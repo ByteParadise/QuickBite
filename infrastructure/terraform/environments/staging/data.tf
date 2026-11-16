@@ -1,9 +1,8 @@
-# ? data.tf
-# staging/ looks up base/'s existing VPC, subnets, and secrets by AWS
-# tag/name rather than reading base's Terraform state
 
-# ? data
-# data blocks are read-only queries against AWS's live state
+# ? data.tf
+# data reads lives state values from the provider.
+
+# ====== Reads values set by `base/` for existing VPC, subnets, and secrets by AWS tag/name ====== #
 
 data "aws_vpc" "main" {
   filter {
@@ -19,9 +18,16 @@ data "aws_subnets" "public" {
     name   = "vpc-id"
     values = [data.aws_vpc.main.id]
   }
+
   tags = {
     Name = "quickbite-public-*"
   }
+
+  # ? Above this equivalent to this, but a shortcut
+  # filter { 
+  #   name = "tag:Name"
+  #   values = ["quickbite-public-*"] 
+  # }
 }
 
 data "aws_subnets" "private" {
@@ -41,8 +47,10 @@ data "aws_route_table" "private" {
   }
 }
 
-# --- secrets base/ created, that ESO needs read access to ---
-# scoped to read-only access on the secret from base/secrets.tf
 data "aws_secretsmanager_secret" "stripe_secret_key" {
   name = "quickbite/account-service/STRIPE_SECRET_KEY"
 }
+
+# Calls STS `GetCallerIdentity` which is the identity actually running
+# `terraform apply`.
+data "aws_caller_identity" "current" {}

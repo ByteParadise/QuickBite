@@ -11,6 +11,10 @@ variable "cluster_name" {
   type = string
 }
 
+variable "namespace" {
+  type = string
+}
+
 # ARNs of the Secrets Manager secrets ESO is allowed to read — currently
 # just account-service's STRIPE_SECRET_KEY, passed in from the root module.
 # A list so future services' secrets can be appended without changing this

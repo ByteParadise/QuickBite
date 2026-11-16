@@ -1,45 +1,40 @@
 # ? eso/main.tf
-# installs External Secrets Operator (ESO) into the cluster via
+# Installs External Secrets Operator (ESO) into the cluster via
 # Helm, and configures it to actually talk to AWS Secrets Manager
 # — the piece that makes `account-service-secrets` (referenced
 # by the Deployment, defined in `externalsecret.yaml`) actually
 # get populated
-#
-# the helm/kubectl provider connections themselves live in the calling
-# root module (environments/staging/providers.tf) — Terraform restricts
-# configuring providers inside non-root modules, so this module just
-# consumes the root's default helm/kubectl provider configuration.
 
-# the actual install: pulls the `external-secrets` chart from its official
-# repository into its own `external-secrets` namespace. The `set` block
-# forces its ServiceAccount's name to exactly `external-secrets`.
+# Installs `external-secrets` chart from its official repo into its own
+# `external-secrets` namespace.
 resource "helm_release" "external_secrets" {
+  # Terraform records the result as a release named `name`, so it can upgrade,
+  # roll back or uninstall the set as one unit.
   name             = "external-secrets"
+  # Repo where charts are hosted
   repository       = "https://charts.external-secrets.io"
+  # Which package to install from the host
   chart            = "external-secrets"
   version          = var.chart_version
-  namespace        = "external-secrets"
+  # Where in the cluster the release is installed
+  namespace        = var.namespace
   create_namespace = true
   timeout          = 600 # default 300s isn't enough for this chart's uninstall
 
-  # pinned explicitly, not left to the chart's auto-generated fullname —
-  # must exactly match the pod identity association below's namespace/
-  # service_account, same fragility as the Deployment's serviceAccountName
+  # set overrides the chart's template default values
   set {
+    # A path into the chart's `values.yaml`
     name  = "serviceAccount.name"
+    # value is the name of the Kubernetes ServiceAccount the chart creates.
+    # The main ESO controller pod runs as that ServiceAccount.
     value = "external-secrets"
   }
 }
 
-# creates a `ClusterSecretStore`, a custom resource ESO itself defines, telling
-# it how to reach Secrets Manager (just service + region — no credentials
-# needed, since ESO's pod gets AWS permissions automatically via its own Pod
-# Identity association below). This uses the separate kubectl provider instead of
-# Terraform's official `kubernetes_manifest` resource specifically because
-# `kubernetes_manifest` validates against the CRD's schema at `plan` time —
-# and that CRD doesn't exist until the Helm chart above actually installs it,
-# creating a chicken-and-egg failure the kubectl provider sidesteps by not
-# doing that validation.
+# Creates ClusterSecretStore object.
+# This tells ESO to read from Secrets Manager in your region. 
+# Every `ExternalSecret` in the GitOps repo, such as `account-service-secrets`,
+# refers to this store by name.
 resource "kubectl_manifest" "cluster_secret_store" {
   yaml_body = yamlencode({
     apiVersion = "external-secrets.io/v1"
@@ -58,10 +53,7 @@ resource "kubectl_manifest" "cluster_secret_store" {
   depends_on = [helm_release.external_secrets]
 }
 
-# --- External Secrets Operator's own Pod Identity: read-only access to
-# the secrets it's been scoped to (var.secret_arns), nothing broader ---
-
-# trust policy allowing pod(s) to assume
+# Trust policy for external-secret pods to assume
 data "aws_iam_policy_document" "pod_identity_assume" {
   statement {
     actions = ["sts:AssumeRole", "sts:TagSession"]
@@ -72,16 +64,22 @@ data "aws_iam_policy_document" "pod_identity_assume" {
   }
 }
 
-data "aws_iam_policy_document" "eso_secrets_access" {
-  statement {
-    actions   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
-    resources = var.secret_arns
-  }
-}
+# IAM role for external-secrets pods
 resource "aws_iam_role" "eso" {
   name               = "quickbite-external-secrets-operator"
   assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
 }
+
+# Permissions allowing external-secret pods to access Secret Manager
+data "aws_iam_policy_document" "eso_secrets_access" {
+  statement {
+    actions   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+    # Secrets registered in Secrets Manager from base
+    resources = var.secret_arns
+  }
+}
+
+# Associate the role and permissions
 resource "aws_iam_role_policy" "eso_secrets_access" {
   role   = aws_iam_role.eso.id
   policy = data.aws_iam_policy_document.eso_secrets_access.json

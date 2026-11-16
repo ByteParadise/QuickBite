@@ -2,7 +2,7 @@
 # EKS cluster (control plane) and its worker nodes, plus the access
 # grant that lets you `kubectl` into it
 
-# trust policy allowing eks to assume
+# Trust policy for eks to assume
 data "aws_iam_policy_document" "eks_cluster_assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -13,7 +13,7 @@ data "aws_iam_policy_document" "eks_cluster_assume" {
   }
 }
 
-# the cluster's role
+# IAM role for EKS
 resource "aws_iam_role" "eks_cluster" {
   name               = "quickbite-eks-cluster-role"
   assume_role_policy = data.aws_iam_policy_document.eks_cluster_assume.json
@@ -25,7 +25,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
-# trust policy allowing node to assume
+# Trust policy for node to assume
 data "aws_iam_policy_document" "eks_node_assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -36,29 +36,24 @@ data "aws_iam_policy_document" "eks_node_assume" {
   }
 }
 
-# the node's role
+# IAM role for node
 resource "aws_iam_role" "eks_node" {
   name               = "quickbite-eks-node-role"
   assume_role_policy = data.aws_iam_policy_document.eks_node_assume.json
 }
 
-# three EKS worker permissions
-# join the cluster
-resource "aws_iam_role_policy_attachment" "eks_node_worker" {
+# EKS Node permissions
+resource "aws_iam_role_policy_attachment" "eks_node" {
+  for_each = toset([
+    # Join the cluster
+    "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+    # Run the CNI (Container networking)
+    "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+    # Pull images from ECR
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+  ])
   role       = aws_iam_role.eks_node.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-}
-
-# run the CNI (container networking)
-resource "aws_iam_role_policy_attachment" "eks_node_cni" {
-  role       = aws_iam_role.eks_node.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-}
-
-# pull images from ECR.
-resource "aws_iam_role_policy_attachment" "eks_node_ecr" {
-  role       = aws_iam_role.eks_node.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  policy_arn = each.value
 }
 
 # EKS (and several of its addons/controllers) expect every subnet it uses
@@ -66,7 +61,6 @@ resource "aws_iam_role_policy_attachment" "eks_node_ecr" {
 # this when it created the subnets, since the cluster name didn't exist yet.
 # aws_ec2_tag lets this stack add a tag to a resource it doesn't own,
 # without taking over management of the whole subnet.
-
 resource "aws_ec2_tag" "public_cluster" {
   for_each    = toset(var.public_subnet_ids)
   resource_id = each.value
@@ -83,44 +77,38 @@ resource "aws_ec2_tag" "private_cluster" {
   value       = "shared"
 }
 
-# this gives the private subnets (where EKS worker nodes live)
-# outbound internet access — to pull container images, reach
-# AWS APIs, etc — without exposing those nodes to inbound traffic
-# from the internet.
-# base/'s private route table has no route to the internet
-# — that's deliberately added here since a NAT Gateway incurs cost.
-
-# allocates a static public IP address
+# Allocates a static public IP address for NAT
 resource "aws_eip" "nat" {
   domain = "vpc"
   tags   = { Name = "quickbite-${var.environment}-nat-eip" }
 }
 
-# create NAT with the IP address
+# Create NAT with the IP address
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
-  # NAT Gateways live in a public subnet but serve private subnets' egress
+  # NAT Gateways live in a public subnet and serve private subnets' egress
   subnet_id     = var.public_subnet_ids[0]
   tags          = { Name = "quickbite-${var.environment}-nat" }
 
   depends_on = [aws_eip.nat]
 }
 
-# gives the subnet internet route
+# Gives the private subnet internet route.
+# EKS nodes need outbound internet access to pull container images,
+# reach AWS APIs, etc — without being exposed to inbound traffic.
 resource "aws_route" "private_nat" {
   route_table_id         = var.private_route_table_id
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.main.id
 }
 
-# the control plane itself
+# Create the control plane itself
 resource "aws_eks_cluster" "main" {
   name     = var.cluster_name
-  # cluster IAM role
   role_arn = aws_iam_role.eks_cluster.arn
   version  = var.kubernetes_version
 
-  # both public and private subnets
+  # Assign both public and private subnets
   # public: lets you run kubectl straight from your laptop, no bastion/VPN
   # private: required for the control plane to reach the worker nodes
   vpc_config {
@@ -129,15 +117,37 @@ resource "aws_eks_cluster" "main" {
     endpoint_private_access = true
   }
 
-  # API mode is required for aws_eks_access_entry/aws_eks_access_policy_association
-  # below; bootstrap_cluster_creator_admin_permissions auto-grants the identity
-  # running this apply cluster-admin, which is what makes helm/kubectl work at all
   access_config {
-    authentication_mode                         = "API_AND_CONFIG_MAP"
+    # Getting into an EKS cluster takes two separate questions:
+    # 1. "Who are you?": IAM answers this. kubectl sends a token from
+    # `aws eks get-token`, and EKS verifies it. This is the same in every mode.
+    # - This happens when you call `aws_eks_cluster_auth` in providers.tf
+    # 2. "What may this IAM identity do in Kubernetes?": Kubernetes doesn't
+    # understand IAM, so EKS needs a lookup table that maps an IAM ARN to
+    # Kubernetes permissions.
+    # `authentication_mode` decides where that lookup table lives.
+    # 1. The `aws-auth` ConfigMap
+    # - A YAML object inside the cluster, edited with `kubectl`.
+    # - You need cluster access to change it, which causes a chicken-and-egg problem
+    # 2. Access entires
+    # - Stored in the EKS API, outside the cluster
+    # - Managed with the AWS CLI or Terraform (aws_eks_access_entry, 
+    # aws_eks_access_policy_association), which below bootstrap already creates,
+    # and logged in CloudTrail.
+    # - Changing them doesn't require cluster access.
+    authentication_mode = "API"
+    # Automatic admin for the creator.
+    # 1. When the cluster is created, EKS adds an access entry for the IAM
+    # identity that created it (through the `terraform` profile), with
+    # AmazonEKSClusterAdminPolicy.
+    # 2. That's why the helm/kubectl providers can install thgins during the
+    # same `apply`.
+    # 3. It only takes effect at creation. Changing it later is expected to
+    # force the cluster to be replaced.
     bootstrap_cluster_creator_admin_permissions = true
   }
 
-  # forces cluster-policy attachment and the subnet tagging to finish first
+  # Force cluster-policy attachment and the subnet tagging to finish first
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_policy,
     aws_ec2_tag.public_cluster,
@@ -145,13 +155,11 @@ resource "aws_eks_cluster" "main" {
   ]
 }
 
-# managed group of nodes
+# Create group of nodes
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "quickbite-${var.environment}-nodes"
-  # node IAM role
   node_role_arn   = aws_iam_role.eks_node.arn
-  # workers live in private subnets only
   subnet_ids      = var.private_subnet_ids
   instance_types  = [var.node_instance_type]
 
@@ -161,43 +169,17 @@ resource "aws_eks_node_group" "main" {
     max_size     = var.node_max_size
   }
 
-  # node IAM policies, and the NAT route since nodes need outbound
+  # Node IAM policies, and the NAT route since nodes need outbound
   # internet to actually boot and join the cluster
   depends_on = [
     aws_iam_role_policy_attachment.eks_node_worker,
     aws_iam_role_policy_attachment.eks_node_cni,
     aws_iam_role_policy_attachment.eks_node_ecr,
-    # nodes need outbound internet (kubelet, kube-proxy images, SSM, etc.)
     aws_route.private_nat,
   ]
 }
 
-# Grants the identity running `terraform apply` (you, via the "terraform"
-# profile) kubectl access to the cluster it's creating.
-
-# ! Commented out — redundant with access_config's
-# bootstrap_cluster_creator_admin_permissions = true above, which already
-# makes AWS auto-create an equivalent access entry + AmazonEKSClusterAdminPolicy
-# association for the cluster creator on its own. Creating these explicitly
-# as well caused:
-#   Error: ResourceInUseException: The specified access entry resource
-#   is already in use on this cluster.
-# resource "aws_eks_access_entry" "admin" {
-#   cluster_name  = aws_eks_cluster.main.name
-#   principal_arn = var.admin_principal_arn
-# }
-
-resource "aws_eks_access_policy_association" "admin" {
-  cluster_name  = aws_eks_cluster.main.name
-  principal_arn = var.admin_principal_arn
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-
-  access_scope {
-    type = "cluster"
-  }
-}
-
-# installs the Pod Identity Agent itself onto the cluster (a DaemonSet
+# Installs the Pod Identity Agent itself onto the cluster (a DaemonSet
 # AWS manages) — nothing in modules/rds or modules/eso's pod identity
 # associations works without this running first
 resource "aws_eks_addon" "pod_identity" {

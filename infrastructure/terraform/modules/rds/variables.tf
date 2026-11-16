@@ -24,23 +24,24 @@ variable "account_id" {
 
 variable "pod_namespace" {
   type    = string
-  default = "account-service"
 }
 
 variable "pod_service_account" {
   type    = string
-  default = "account-service"
 }
 
 variable "instance_class" {
   type    = string
-  default = "db.t4g.micro"
 }
 
 variable "multi_az" {
   type    = bool
-  default = false
 }
+
+variable "allocated_storage" {
+  type    = number
+}
+
 
 # short-lived environments (staging) don't need a final snapshot on
 # teardown; a persistent environment (production) should set this false.

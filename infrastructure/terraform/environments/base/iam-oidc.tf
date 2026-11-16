@@ -33,7 +33,7 @@ data "aws_iam_policy_document" "github_actions_trust" {
       # Federated: external identity provider
       type        = "Federated"
       # Register GitHub
-      identifiers = [aws_iam_openid_connecft_provider.github.arn]
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
     }
 
     # When AWS receives JWT token, it performs additional checks for validation.
@@ -47,10 +47,10 @@ data "aws_iam_policy_document" "github_actions_trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-        values = concat(
-          [for repo in var.github_repos : "repo:${var.github_org}/${repo}:*"],
-          [for repo in var.github_repos : "repo:${var.github_org}@*/${repo}@*:*"]
-        )
+        values = [
+          "repo:ByteParadise/QuickBite:*",
+          "repo:ByteParadise@*/QuickBite@*:*",
+        ]
     }
   }
 }

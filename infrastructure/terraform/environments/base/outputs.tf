@@ -1,3 +1,5 @@
+# ? outputs.tf
+# These are mainly for humans to look at.
 
 # ? how outputs get allocated
 # 1. terraform apply runs
