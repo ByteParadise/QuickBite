@@ -1,5 +1,5 @@
 # ? argocd/main.tf
-# Installs Argo CD itself into the cluster, then bootstraps the one piece that
+# Installs Root Argo CD itself into the cluster, then bootstraps the one piece that
 # lets everything after this be driven entirely by Git — no more Terraform
 # changes needed when more services are added.
 
